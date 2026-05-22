@@ -2,7 +2,9 @@ import axios from 'axios'
 import type { Expense, Trip, TripMember, TripExpense, User } from '@/types'
 
 const http = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}`
+    : '/api',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
