@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "travel-ledger-api",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["json-server", "--watch", "db.json", "--port", "3001"],
+      "port": 3001,
+      "cwd": "C:\\Users\\user\\Desktop\\travel-ledger"
+    },
+    {
+      "name": "travel-ledger",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5173"],
+      "port": 5173,
+      "cwd": "C:\\Users\\user\\Desktop\\travel-ledger"
+    }
+  ]
+}

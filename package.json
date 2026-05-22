@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently \"npm run api\" \"vite --port 5173\"",
     "api": "json-server --watch db.json --port 3001",
-    "start": "json-server --watch db.json --port $PORT --host 0.0.0.0",
+    "start": "node server.js",
     "build": "vue-tsc && vite build",
     "preview": "vite preview"
   },
