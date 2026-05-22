@@ -1,0 +1,15 @@
+{
+  "expenses": [],
+  "trips": [],
+  "members": [],
+  "tripExpenses": [],
+  "users": [
+    {
+      "username": "rezhe",
+      "password": "123456",
+      "displayName": "哲哲",
+      "createdAt": "2026-05-22T14:10:34.718Z",
+      "id": 1
+    }
+  ]
+}
