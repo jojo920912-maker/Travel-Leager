@@ -1,119 +1,258 @@
-import axios from 'axios'
+import { supabase } from '@/lib/supabase'
 import type { Expense, Trip, TripMember, TripExpense, User, Budget } from '@/types'
-
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}`
-    : '/api',
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
-})
 
 function now() {
   return new Date().toISOString()
 }
 
+/**
+ * 將 Supabase 回傳的 { data, error } 轉換成 { data: T }，
+ * 與原本 axios 回傳格式相容，讓 stores 無需修改。
+ */
+async function wrap<T>(
+  query: PromiseLike<{ data: T | null; error: any }>
+): Promise<{ data: T }> {
+  const { data, error } = await query
+  if (error) throw error
+  return { data: data as T }
+}
+
 // ─── Auth ─────────────────────────────────────────────────────
 export const authApi = {
   findByUsername(username: string) {
-    return http.get<User[]>('/users', { params: { username } })
+    return wrap<User[]>(
+      supabase.from('users').select('*').eq('username', username)
+    )
   },
-  register(data: Omit<User, 'id'>) {
-    return http.post<User>('/users', { ...data, createdAt: now() })
+  register(data: Omit<User, 'id' | 'createdAt'>) {
+    return wrap<User>(
+      supabase
+        .from('users')
+        .insert({ ...data, createdAt: now() })
+        .select()
+        .single()
+    )
   },
 }
 
 // ─── Expenses ─────────────────────────────────────────────────
 export const expenseApi = {
   getAll(userId: number, params?: Record<string, unknown>) {
-    return http.get<Expense[]>('/expenses', {
-      params: { _sort: 'date,time', _order: 'desc,desc', userId, ...params },
-    })
+    let q = supabase
+      .from('expenses')
+      .select('*')
+      .eq('userId', userId)
+
+    // date_like: '2024-01' → 前綴過濾當月資料
+    if (params?.date_like) {
+      q = q.like('date', `${params.date_like}%`)
+    }
+
+    return wrap<Expense[]>(
+      q.order('date', { ascending: false }).order('time', { ascending: false })
+    )
   },
+
   create(data: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) {
-    return http.post<Expense>('/expenses', { ...data, createdAt: now(), updatedAt: now() })
+    return wrap<Expense>(
+      supabase
+        .from('expenses')
+        .insert({ ...data, createdAt: now(), updatedAt: now() })
+        .select()
+        .single()
+    )
   },
+
   update(id: number, data: Partial<Omit<Expense, 'id' | 'createdAt'>>) {
-    return http.patch<Expense>(`/expenses/${id}`, { ...data, updatedAt: now() })
+    return wrap<Expense>(
+      supabase
+        .from('expenses')
+        .update({ ...data, updatedAt: now() })
+        .eq('id', id)
+        .select()
+        .single()
+    )
   },
-  delete(id: number) {
-    return http.delete(`/expenses/${id}`)
+
+  async delete(id: number) {
+    const { error } = await supabase.from('expenses').delete().eq('id', id)
+    if (error) throw error
+    return { data: null }
   },
 }
 
 // ─── Trips ────────────────────────────────────────────────────
 export const tripApi = {
   getAll(userId: number) {
-    return http.get<Trip[]>('/trips', { params: { userId, _sort: 'createdAt', _order: 'desc' } })
+    return wrap<Trip[]>(
+      supabase
+        .from('trips')
+        .select('*')
+        .eq('userId', userId)
+        .order('createdAt', { ascending: false })
+    )
   },
+
   getById(id: number) {
-    return http.get<Trip>(`/trips/${id}`)
+    return wrap<Trip>(
+      supabase.from('trips').select('*').eq('id', id).single()
+    )
   },
+
   create(data: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>) {
-    return http.post<Trip>('/trips', { ...data, createdAt: now(), updatedAt: now() })
+    return wrap<Trip>(
+      supabase
+        .from('trips')
+        .insert({ ...data, createdAt: now(), updatedAt: now() })
+        .select()
+        .single()
+    )
   },
+
   update(id: number, data: Partial<Omit<Trip, 'id' | 'createdAt'>>) {
-    return http.patch<Trip>(`/trips/${id}`, { ...data, updatedAt: now() })
+    return wrap<Trip>(
+      supabase
+        .from('trips')
+        .update({ ...data, updatedAt: now() })
+        .eq('id', id)
+        .select()
+        .single()
+    )
   },
-  delete(id: number) {
-    return http.delete(`/trips/${id}`)
+
+  async delete(id: number) {
+    const { error } = await supabase.from('trips').delete().eq('id', id)
+    if (error) throw error
+    return { data: null }
   },
 }
 
 // ─── Members ──────────────────────────────────────────────────
 export const memberApi = {
   getByTripId(tripId: number) {
-    return http.get<TripMember[]>('/members', { params: { tripId } })
+    return wrap<TripMember[]>(
+      supabase.from('members').select('*').eq('tripId', tripId)
+    )
   },
+
   create(data: Omit<TripMember, 'id'>) {
-    return http.post<TripMember>('/members', data)
+    return wrap<TripMember>(
+      supabase.from('members').insert(data).select().single()
+    )
   },
+
   update(id: number, data: Partial<Omit<TripMember, 'id'>>) {
-    return http.patch<TripMember>(`/members/${id}`, data)
+    return wrap<TripMember>(
+      supabase.from('members').update(data).eq('id', id).select().single()
+    )
   },
-  delete(id: number) {
-    return http.delete(`/members/${id}`)
+
+  async delete(id: number) {
+    const { error } = await supabase.from('members').delete().eq('id', id)
+    if (error) throw error
+    return { data: null }
   },
 }
 
 // ─── Budgets ──────────────────────────────────────────────────
 export const budgetApi = {
   getByMonth(userId: number, month: string) {
-    return http.get<Budget[]>('/budgets', { params: { userId, month } })
+    return wrap<Budget[]>(
+      supabase
+        .from('budgets')
+        .select('*')
+        .eq('userId', userId)
+        .eq('month', month)
+    )
   },
+
   getAll(userId: number) {
-    return http.get<Budget[]>('/budgets', { params: { userId, _sort: 'month', _order: 'desc' } })
+    return wrap<Budget[]>(
+      supabase
+        .from('budgets')
+        .select('*')
+        .eq('userId', userId)
+        .order('month', { ascending: false })
+    )
   },
+
   create(data: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) {
-    return http.post<Budget>('/budgets', { ...data, createdAt: now(), updatedAt: now() })
+    return wrap<Budget>(
+      supabase
+        .from('budgets')
+        .insert({ ...data, createdAt: now(), updatedAt: now() })
+        .select()
+        .single()
+    )
   },
+
   update(id: number, data: Partial<Omit<Budget, 'id' | 'createdAt'>>) {
-    return http.patch<Budget>(`/budgets/${id}`, { ...data, updatedAt: now() })
+    return wrap<Budget>(
+      supabase
+        .from('budgets')
+        .update({ ...data, updatedAt: now() })
+        .eq('id', id)
+        .select()
+        .single()
+    )
   },
-  delete(id: number) {
-    return http.delete(`/budgets/${id}`)
+
+  async delete(id: number) {
+    const { error } = await supabase.from('budgets').delete().eq('id', id)
+    if (error) throw error
+    return { data: null }
   },
 }
 
 // ─── Trip Expenses ────────────────────────────────────────────
 export const tripExpenseApi = {
   getByTripId(tripId: number) {
-    return http.get<TripExpense[]>('/tripExpenses', {
-      params: { tripId, _sort: 'date,time', _order: 'desc,desc' },
-    })
+    return wrap<TripExpense[]>(
+      supabase
+        .from('tripExpenses')
+        .select('*')
+        .eq('tripId', tripId)
+        .order('date', { ascending: false })
+        .order('time', { ascending: false })
+    )
   },
+
   getByTripIdAndMonth(tripId: number, month: string) {
-    return http.get<TripExpense[]>('/tripExpenses', {
-      params: { tripId, date_like: month, _sort: 'date,time', _order: 'desc,desc' },
-    })
+    return wrap<TripExpense[]>(
+      supabase
+        .from('tripExpenses')
+        .select('*')
+        .eq('tripId', tripId)
+        .like('date', `${month}%`)
+        .order('date', { ascending: false })
+        .order('time', { ascending: false })
+    )
   },
+
   create(data: Omit<TripExpense, 'id' | 'createdAt'>) {
-    return http.post<TripExpense>('/tripExpenses', { ...data, createdAt: now() })
+    return wrap<TripExpense>(
+      supabase
+        .from('tripExpenses')
+        .insert({ ...data, createdAt: now() })
+        .select()
+        .single()
+    )
   },
+
   update(id: number, data: Partial<Omit<TripExpense, 'id' | 'createdAt'>>) {
-    return http.patch<TripExpense>(`/tripExpenses/${id}`, data)
+    return wrap<TripExpense>(
+      supabase
+        .from('tripExpenses')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single()
+    )
   },
-  delete(id: number) {
-    return http.delete(`/tripExpenses/${id}`)
+
+  async delete(id: number) {
+    const { error } = await supabase.from('tripExpenses').delete().eq('id', id)
+    if (error) throw error
+    return { data: null }
   },
 }
