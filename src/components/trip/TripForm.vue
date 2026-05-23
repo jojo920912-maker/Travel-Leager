@@ -77,6 +77,7 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 import { CURRENCIES } from '@/types'
 import type { Trip } from '@/types'
 import { useTripStore } from '@/stores/trip'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps<{
@@ -90,6 +91,7 @@ const emit = defineEmits<{
 }>()
 
 const store = useTripStore()
+const authStore = useAuthStore()
 const { show: showToast } = useToast()
 const saving = ref(false)
 
@@ -125,6 +127,9 @@ async function submit() {
       showToast('旅程已更新 ✓')
     } else {
       saved = await store.addTrip(form.value)
+      // 自動將當前使用者加入成員
+      const userName = authStore.currentUser?.displayName ?? authStore.currentUser?.username ?? '我'
+      await store.addMember({ tripId: saved.id, name: userName, color: '#5CC8BE' })
       showToast('旅程已新增 ✓')
     }
     show.value = false
