@@ -103,8 +103,10 @@ export interface Settlement {
 export interface Budget {
   id: number
   userId: number
-  month: string   // YYYY-MM
-  total: number   // 0 = not set
+  month: string         // YYYY-MM
+  total: number         // 0 = not set
+  dailyBudget: number   // 記帳（日常）分配預算，0 = 未分配
+  tripBudget: number    // 旅行分配預算，0 = 未分配
   categories: Partial<Record<ExpenseCategory, number>>
   createdAt: string
   updatedAt: string

@@ -9,6 +9,8 @@ export const useTripStore = defineStore('trip', () => {
   const currentTrip = ref<Trip | null>(null)
   const members = ref<TripMember[]>([])
   const tripExpenses = ref<TripExpense[]>([])
+  // 跨所有旅程的當月支出（供預算計算用）
+  const monthTripExpenses = ref<TripExpense[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -97,6 +99,21 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
+  // 取得該月份所有旅程的支出（供預算頁使用）
+  async function fetchMonthTripExpenses(month: string) {
+    try {
+      if (!trips.value.length) await fetchTrips()
+      const results = await Promise.all(
+        trips.value.map((t) =>
+          tripExpenseApi.getByTripIdAndMonth(t.id, month).then((r) => r.data),
+        ),
+      )
+      monthTripExpenses.value = results.flat()
+    } catch (e) {
+      console.error('載入旅行月支出失敗', e)
+    }
+  }
+
   async function fetchTripDetail(id: number) {
     loading.value = true
     error.value = null
@@ -170,12 +187,14 @@ export const useTripStore = defineStore('trip', () => {
     currentTrip,
     members,
     tripExpenses,
+    monthTripExpenses,
     loading,
     error,
     totalTripExpense,
     balances,
     settlements,
     fetchTrips,
+    fetchMonthTripExpenses,
     fetchTripDetail,
     addTrip,
     editTrip,

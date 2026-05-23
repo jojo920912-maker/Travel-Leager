@@ -102,6 +102,11 @@ export const tripExpenseApi = {
       params: { tripId, _sort: 'date,time', _order: 'desc,desc' },
     })
   },
+  getByTripIdAndMonth(tripId: number, month: string) {
+    return http.get<TripExpense[]>('/tripExpenses', {
+      params: { tripId, date_like: month, _sort: 'date,time', _order: 'desc,desc' },
+    })
+  },
   create(data: Omit<TripExpense, 'id' | 'createdAt'>) {
     return http.post<TripExpense>('/tripExpenses', { ...data, createdAt: now() })
   },
