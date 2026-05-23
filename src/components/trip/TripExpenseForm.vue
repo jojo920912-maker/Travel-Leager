@@ -57,28 +57,51 @@
         </select>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" ref="splitGroupRef">
         <label class="form-label">分攤成員</label>
-        <div class="split-members">
-          <label
-            v-for="m in members"
-            :key="m.id"
-            class="split-member"
-            :class="{ selected: form.splitAmong.includes(m.id) }"
-            tabindex="7"
-            @keydown.space.prevent="toggleMember(m.id)"
+        <div class="split-dropdown-wrapper">
+          <button
+            type="button"
+            class="form-input split-trigger"
+            @click="showSplitDrop = !showSplitDrop"
           >
-            <input
-              type="checkbox"
-              :value="m.id"
-              v-model="form.splitAmong"
-              class="visually-hidden"
-              tabindex="-1"
-            />
-            <span class="avatar avatar-sm" :style="{ background: m.color }">{{ m.name[0] }}</span>
-            <span>{{ m.name }}</span>
-          </label>
+            <span v-if="!form.splitAmong.length" class="split-placeholder">選擇分攤成員</span>
+            <span v-else-if="form.splitAmong.length === members.length" class="split-summary">
+              全部成員（{{ members.length }} 人）
+            </span>
+            <span v-else class="split-summary">
+              {{ selectedNames }} （{{ form.splitAmong.length }} 人）
+            </span>
+            <ChevronDown :size="15" class="split-chevron" :class="{ open: showSplitDrop }" />
+          </button>
+
+          <Transition name="drop">
+            <div v-if="showSplitDrop" class="split-dropdown-menu">
+              <!-- 全選 / 全清 -->
+              <div class="split-option all-row" @click="toggleAll">
+                <span class="check-box" :class="{ checked: form.splitAmong.length === members.length }">
+                  <Check v-if="form.splitAmong.length === members.length" :size="11" />
+                  <Minus v-else-if="form.splitAmong.length > 0" :size="11" />
+                </span>
+                <span class="split-opt-label">全部成員</span>
+              </div>
+              <div class="drop-divider" />
+              <div
+                v-for="m in members"
+                :key="m.id"
+                class="split-option"
+                @click="toggleMember(m.id)"
+              >
+                <span class="check-box" :class="{ checked: form.splitAmong.includes(m.id) }">
+                  <Check v-if="form.splitAmong.includes(m.id)" :size="11" />
+                </span>
+                <span class="avatar avatar-sm" :style="{ background: m.color }">{{ m.name[0] }}</span>
+                <span class="split-opt-label">{{ m.name }}</span>
+              </div>
+            </div>
+          </Transition>
         </div>
+
         <p v-if="form.splitAmong.length > 0" class="split-preview">
           每人 {{ currencySymbol }}{{ perPerson }}
         </p>
@@ -100,7 +123,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ChevronDown, Check, Minus } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { CATEGORY_META, CURRENCIES } from '@/types'
 import type { TripMember, TripExpense, ExpenseCategory } from '@/types'
@@ -123,6 +147,34 @@ const emit = defineEmits<{
 const store = useTripStore()
 const { show: showToast } = useToast()
 const saving = ref(false)
+
+// 分攤下拉
+const showSplitDrop = ref(false)
+const splitGroupRef = ref<HTMLElement | null>(null)
+
+const selectedNames = computed(() =>
+  props.members
+    .filter((m) => form.value.splitAmong.includes(m.id))
+    .map((m) => m.name)
+    .join('、')
+)
+
+function toggleAll() {
+  if (form.value.splitAmong.length === props.members.length) {
+    form.value.splitAmong = []
+  } else {
+    form.value.splitAmong = props.members.map((m) => m.id)
+  }
+}
+
+function handleClickOutside(e: MouseEvent) {
+  if (splitGroupRef.value && !splitGroupRef.value.contains(e.target as Node)) {
+    showSplitDrop.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('mousedown', handleClickOutside))
+onBeforeUnmount(() => document.removeEventListener('mousedown', handleClickOutside))
 
 const show = computed({
   get: () => props.modelValue,
@@ -199,35 +251,82 @@ async function submit() {
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
 
-.split-members {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+/* ── 分攤下拉 ─────────────────────────────── */
+.split-dropdown-wrapper { position: relative; }
 
-.split-member {
+.split-trigger {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--border);
+  justify-content: space-between;
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-light);
-  transition: all var(--transition);
+  text-align: left;
+  user-select: none;
 }
 
-.split-member:hover { border-color: var(--mint); }
-.split-member.selected { border-color: var(--mint); background: var(--mint-pale); color: var(--mint-dark); }
+.split-placeholder { color: var(--text-muted); }
+.split-summary { color: var(--text); font-weight: 500; }
 
-.visually-hidden {
+.split-chevron {
+  color: var(--mint);
+  flex-shrink: 0;
+  transition: transform var(--transition);
+}
+.split-chevron.open { transform: rotate(180deg); }
+
+.split-dropdown-menu {
   position: absolute;
-  width: 1px; height: 1px;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 50;
   overflow: hidden;
-  clip: rect(0,0,0,0);
 }
+
+.split-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background var(--transition);
+}
+.split-option:hover { background: var(--mint-pale); }
+
+.all-row { font-weight: 600; color: var(--text); }
+
+.check-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+  color: white;
+}
+.check-box.checked {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+.split-opt-label { flex: 1; }
+
+.drop-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 2px 0;
+}
+
+/* dropdown 動畫 */
+.drop-enter-active, .drop-leave-active { transition: all 0.15s ease; }
+.drop-enter-from, .drop-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .split-preview {
   font-size: 0.82rem;

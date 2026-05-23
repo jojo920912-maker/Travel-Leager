@@ -138,6 +138,7 @@ import MemberManager from '@/components/trip/MemberManager.vue'
 import TripExpenseForm from '@/components/trip/TripExpenseForm.vue'
 import SplitSummary from '@/components/trip/SplitSummary.vue'
 import { useTripStore } from '@/stores/trip'
+import { useAuthStore } from '@/stores/auth'
 import { CATEGORY_META, CURRENCIES } from '@/types'
 import type { TripExpense } from '@/types'
 import { useToast } from '@/composables/useToast'
@@ -146,6 +147,7 @@ import { useKeyboard } from '@/composables/useKeyboard'
 const props = defineProps<{ id: number }>()
 
 const store = useTripStore()
+const authStore = useAuthStore()
 const { show: showToast } = useToast()
 
 const activeTab = ref<'expenses' | 'members' | 'split'>('expenses')
@@ -187,7 +189,20 @@ function openAdd() {
 
 useKeyboard({ n: openAdd, N: openAdd })
 
-onMounted(() => store.fetchTripDetail(props.id))
+onMounted(async () => {
+  await store.fetchTripDetail(props.id)
+  // 若旅程尚無成員，自動將登入者加入
+  if (!store.members.length) {
+    const user = authStore.currentUser
+    if (user) {
+      await store.addMember({
+        tripId: props.id,
+        name: user.displayName ?? user.username,
+        color: '#5CC8BE',
+      })
+    }
+  }
+})
 </script>
 
 <style scoped>
