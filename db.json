@@ -1,9 +1,70 @@
 {
-  "expenses": [],
-  "trips": [],
-  "members": [],
-  "tripExpenses": [],
-  "budgets": [],
+  "expenses": [
+    {
+      "title": "拉麵",
+      "amount": 200,
+      "category": "food",
+      "date": "2026-05-23",
+      "time": "16:14",
+      "note": "",
+      "userId": 1,
+      "createdAt": "2026-05-23T08:14:43.158Z",
+      "updatedAt": "2026-05-23T08:14:51.876Z",
+      "id": 1
+    }
+  ],
+  "trips": [
+    {
+      "name": "日本",
+      "description": "",
+      "startDate": "2026-05-23",
+      "endDate": "2026-05-26",
+      "currency": "TWD",
+      "userId": 1,
+      "createdAt": "2026-05-23T08:18:58.438Z",
+      "updatedAt": "2026-05-23T08:18:58.438Z",
+      "id": 1
+    }
+  ],
+  "members": [
+    {
+      "tripId": 1,
+      "name": "哲哲",
+      "color": "#5CC8BE",
+      "id": 1
+    }
+  ],
+  "tripExpenses": [
+    {
+      "title": "拉麵",
+      "amount": 100,
+      "category": "food",
+      "date": "2026-05-23",
+      "time": "16:27",
+      "paidById": 1,
+      "splitAmong": [
+        1
+      ],
+      "note": "",
+      "tripId": 1,
+      "createdAt": "2026-05-23T08:28:13.652Z",
+      "id": 1,
+      "paymentMethod": "cash"
+    }
+  ],
+  "budgets": [
+    {
+      "userId": 1,
+      "month": "2026-05",
+      "total": 20000,
+      "categories": {},
+      "createdAt": "2026-05-23T08:13:51.219Z",
+      "updatedAt": "2026-05-23T08:42:20.091Z",
+      "id": 1,
+      "tripBudget": 10000,
+      "dailyBudget": 1000
+    }
+  ],
   "users": [
     {
       "username": "rezhe",
