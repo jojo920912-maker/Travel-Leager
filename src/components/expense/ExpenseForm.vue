@@ -64,6 +64,24 @@
         </div>
       </div>
 
+      <!-- 付款方式 -->
+      <div class="form-group">
+        <label class="form-label">付款方式</label>
+        <div class="payment-grid">
+          <button
+            v-for="(meta, key) in PAYMENT_META"
+            :key="key"
+            type="button"
+            class="pay-btn"
+            :class="{ active: form.paymentMethod === key }"
+            @click="form.paymentMethod = key as PaymentMethod"
+          >
+            <span class="pay-emoji">{{ meta.emoji }}</span>
+            <span class="pay-label">{{ meta.label }}</span>
+          </button>
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="form-label" for="exp-note">備註</label>
         <textarea
@@ -90,8 +108,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
-import { CATEGORY_META } from '@/types'
-import type { Expense, ExpenseCategory } from '@/types'
+import { CATEGORY_META, PAYMENT_META } from '@/types'
+import type { Expense, ExpenseCategory, PaymentMethod } from '@/types'
 import { useExpenseStore } from '@/stores/expense'
 import { useToast } from '@/composables/useToast'
 
@@ -120,6 +138,7 @@ const defaultForm = () => ({
   title: '',
   amount: 0,
   category: 'food' as ExpenseCategory,
+  paymentMethod: 'cash' as PaymentMethod,
   date: new Date().toISOString().slice(0, 10),
   time: new Date().toTimeString().slice(0, 5),
   note: '',
@@ -133,6 +152,7 @@ watch(() => props.expense, (exp) => {
       title: exp.title,
       amount: exp.amount,
       category: exp.category,
+      paymentMethod: exp.paymentMethod ?? 'cash',
       date: exp.date,
       time: exp.time,
       note: exp.note,
@@ -166,10 +186,48 @@ async function submit() {
 <style scoped>
 .form-stack { display: flex; flex-direction: column; gap: 16px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 4px;
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+
+/* 付款方式 */
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
+
+.pay-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font);
+}
+
+.pay-btn:hover {
+  border-color: var(--mint);
+  background: var(--mint-pale);
+}
+
+.pay-btn.active {
+  border-color: var(--mint);
+  background: var(--mint-pale);
+  box-shadow: 0 0 0 2px rgba(92,200,190,0.2);
+}
+
+.pay-emoji { font-size: 1.2rem; }
+
+.pay-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.pay-btn.active .pay-label { color: var(--mint-dark); font-weight: 600; }
 </style>

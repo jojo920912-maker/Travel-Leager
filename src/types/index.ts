@@ -7,6 +7,23 @@ export type ExpenseCategory =
   | 'health'
   | 'other'
 
+export type PaymentMethod =
+  | 'cash'
+  | 'credit_card'
+  | 'debit_card'
+  | 'mobile_pay'
+  | 'transfer'
+  | 'other'
+
+export const PAYMENT_META: Record<PaymentMethod, { label: string; emoji: string; color: string }> = {
+  cash:        { label: '現金',     emoji: '💵', color: '#81C784' },
+  credit_card: { label: '信用卡',   emoji: '💳', color: '#64B5F6' },
+  debit_card:  { label: '金融卡',   emoji: '🏧', color: '#90A4AE' },
+  mobile_pay:  { label: '行動支付', emoji: '📱', color: '#CE93D8' },
+  transfer:    { label: '轉帳',     emoji: '🏦', color: '#FFB74D' },
+  other:       { label: '其他',     emoji: '💰', color: '#A8B5C2' },
+}
+
 export const CATEGORY_META: Record<ExpenseCategory, { label: string; emoji: string; color: string }> = {
   food:          { label: '餐飲',  emoji: '🍜', color: '#FF8C69' },
   transport:     { label: '交通',  emoji: '🚆', color: '#64B5F6' },
@@ -41,6 +58,7 @@ export interface Expense {
   title: string
   amount: number
   category: ExpenseCategory
+  paymentMethod: PaymentMethod
   date: string     // YYYY-MM-DD
   time: string     // HH:mm
   note: string
@@ -73,6 +91,7 @@ export interface TripExpense {
   title: string
   amount: number
   category: ExpenseCategory
+  paymentMethod: PaymentMethod
   date: string
   time: string
   paidById: number

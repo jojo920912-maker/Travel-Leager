@@ -6,7 +6,12 @@
         <span class="cat-emoji" :title="catMeta.label">{{ catMeta.emoji }}</span>
         <div class="card-info">
           <span class="card-title">{{ expense.title }}</span>
-          <span class="card-time">{{ expense.time }}</span>
+          <div class="card-meta">
+            <span class="card-time">{{ expense.time }}</span>
+            <span class="pay-badge">
+              {{ payMeta.emoji }} {{ payMeta.label }}
+            </span>
+          </div>
         </div>
       </div>
       <div class="card-right">
@@ -28,13 +33,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Pencil, Trash2 } from 'lucide-vue-next'
-import { CATEGORY_META } from '@/types'
+import { CATEGORY_META, PAYMENT_META } from '@/types'
 import type { Expense } from '@/types'
 
 const props = defineProps<{ expense: Expense }>()
 defineEmits<{ edit: [expense: Expense]; delete: [id: number] }>()
 
 const catMeta = computed(() => CATEGORY_META[props.expense.category])
+const payMeta = computed(() => PAYMENT_META[props.expense.paymentMethod ?? 'cash'])
 </script>
 
 <style scoped>
@@ -83,9 +89,25 @@ const catMeta = computed(() => CATEGORY_META[props.expense.category])
   text-overflow: ellipsis;
 }
 
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .card-time {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.pay-badge {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--border-light);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
 .card-right {
