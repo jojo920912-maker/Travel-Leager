@@ -23,6 +23,29 @@
       </div>
     </div>
 
+    <!-- Budget summary -->
+    <RouterLink
+      v-if="budgetStore.currentMonthBudget?.total"
+      to="/budget"
+      class="card budget-summary-card"
+    >
+      <div class="budget-summary-top">
+        <span class="budget-summary-label">💰 本月預算</span>
+        <span class="budget-summary-pct" :class="budgetPctClass">{{ budgetPct }}%</span>
+      </div>
+      <div class="budget-summary-track">
+        <div
+          class="budget-summary-fill"
+          :class="budgetPctClass"
+          :style="{ width: `${Math.min(budgetPct, 100)}%` }"
+        />
+      </div>
+      <div class="budget-summary-labels">
+        <span class="amount">NT$ {{ monthTotal.toLocaleString() }}</span>
+        <span class="budget-summary-limit">/ NT$ {{ budgetStore.currentMonthBudget.total.toLocaleString() }}</span>
+      </div>
+    </RouterLink>
+
     <!-- Category breakdown -->
     <div v-if="Object.keys(expenseStore.byCategory).length" class="card section">
       <h3 class="section-heading">本月分類</h3>
@@ -95,12 +118,14 @@ import ExpenseCard from '@/components/expense/ExpenseCard.vue'
 import ExpenseForm from '@/components/expense/ExpenseForm.vue'
 import { useExpenseStore } from '@/stores/expense'
 import { useTripStore } from '@/stores/trip'
+import { useBudgetStore } from '@/stores/budget'
 import { CATEGORY_META } from '@/types'
 import type { Expense } from '@/types'
 import { useToast } from '@/composables/useToast'
 
 const expenseStore = useExpenseStore()
 const tripStore = useTripStore()
+const budgetStore = useBudgetStore()
 const { show: showToast } = useToast()
 const showForm = ref(false)
 const editTarget = ref<Expense | null>(null)
@@ -115,6 +140,17 @@ const monthExpenses = computed(() => {
 
 const monthTotal = computed(() => monthExpenses.value.reduce((s, e) => s + e.amount, 0))
 const recentExpenses = computed(() => expenseStore.expenses.slice(0, 5))
+
+const budgetPct = computed(() => {
+  const total = budgetStore.currentMonthBudget?.total ?? 0
+  if (!total) return 0
+  return Math.round((monthTotal.value / total) * 100)
+})
+const budgetPctClass = computed(() => {
+  if (budgetPct.value >= 100) return 'danger'
+  if (budgetPct.value >= 80)  return 'warning'
+  return 'safe'
+})
 const activeTrips = computed(() => tripStore.trips.slice(0, 3))
 
 function barWidth(category: string) {
@@ -143,6 +179,7 @@ onMounted(async () => {
   await Promise.all([
     expenseStore.fetchAll(),
     tripStore.fetchTrips(),
+    budgetStore.fetchByMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`),
   ])
 })
 </script>
@@ -240,4 +277,58 @@ onMounted(async () => {
   padding: 2px 10px;
   border-radius: var(--radius-full);
 }
+
+/* Budget summary card */
+.budget-summary-card {
+  display: block;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.budget-summary-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.budget-summary-label { color: var(--text); }
+
+.budget-summary-pct {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.budget-summary-pct.safe    { color: var(--mint-dark); }
+.budget-summary-pct.warning { color: #D97706; }
+.budget-summary-pct.danger  { color: #DC2626; }
+
+.budget-summary-track {
+  height: 8px;
+  background: var(--border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.budget-summary-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+.budget-summary-fill.safe    { background: var(--mint); }
+.budget-summary-fill.warning { background: #F59E0B; }
+.budget-summary-fill.danger  { background: #EF4444; }
+
+.budget-summary-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+
+.budget-summary-limit { color: var(--text-muted); }
 </style>

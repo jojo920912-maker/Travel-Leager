@@ -99,3 +99,13 @@ export interface Settlement {
   toColor: string
   amount: number
 }
+
+export interface Budget {
+  id: number
+  userId: number
+  month: string   // YYYY-MM
+  total: number   // 0 = not set
+  categories: Partial<Record<ExpenseCategory, number>>
+  createdAt: string
+  updatedAt: string
+}

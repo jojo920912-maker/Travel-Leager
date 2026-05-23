@@ -31,6 +31,11 @@ const router = createRouter({
       component: () => import('@/views/TripDetailView.vue'),
       props: (route) => ({ id: Number(route.params.id) }),
     },
+    {
+      path: '/budget',
+      name: 'budget',
+      component: () => import('@/views/BudgetView.vue'),
+    },
   ],
 })
 

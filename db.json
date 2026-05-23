@@ -3,6 +3,7 @@
   "trips": [],
   "members": [],
   "tripExpenses": [],
+  "budgets": [],
   "users": [
     {
       "username": "rezhe",

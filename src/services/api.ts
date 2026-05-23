@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Expense, Trip, TripMember, TripExpense, User } from '@/types'
+import type { Expense, Trip, TripMember, TripExpense, User, Budget } from '@/types'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL
@@ -73,6 +73,25 @@ export const memberApi = {
   },
   delete(id: number) {
     return http.delete(`/members/${id}`)
+  },
+}
+
+// ─── Budgets ──────────────────────────────────────────────────
+export const budgetApi = {
+  getByMonth(userId: number, month: string) {
+    return http.get<Budget[]>('/budgets', { params: { userId, month } })
+  },
+  getAll(userId: number) {
+    return http.get<Budget[]>('/budgets', { params: { userId, _sort: 'month', _order: 'desc' } })
+  },
+  create(data: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) {
+    return http.post<Budget>('/budgets', { ...data, createdAt: now(), updatedAt: now() })
+  },
+  update(id: number, data: Partial<Omit<Budget, 'id' | 'createdAt'>>) {
+    return http.patch<Budget>(`/budgets/${id}`, { ...data, updatedAt: now() })
+  },
+  delete(id: number) {
+    return http.delete(`/budgets/${id}`)
   },
 }
 

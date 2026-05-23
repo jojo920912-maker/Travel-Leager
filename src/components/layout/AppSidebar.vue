@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Wallet, Map, LogOut } from 'lucide-vue-next'
+import { LayoutDashboard, Wallet, Map, PiggyBank, LogOut } from 'lucide-vue-next'
 import { useKeyboard } from '@/composables/useKeyboard'
 import { useAuthStore } from '@/stores/auth'
 
@@ -57,6 +57,7 @@ const navItems = [
   { to: '/',         label: '總覽',  icon: LayoutDashboard, key: '1' },
   { to: '/expenses', label: '記帳',  icon: Wallet,           key: '2' },
   { to: '/trips',    label: '旅行',  icon: Map,              key: '3' },
+  { to: '/budget',   label: '預算',  icon: PiggyBank,        key: '4' },
 ]
 
 const avatarLetter = computed(() => {
@@ -78,6 +79,7 @@ useKeyboard({
   '1': () => router.push('/'),
   '2': () => router.push('/expenses'),
   '3': () => router.push('/trips'),
+  '4': () => router.push('/budget'),
 })
 </script>
 
