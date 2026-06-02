@@ -33,6 +33,16 @@ export const authApi = {
         .single()
     )
   },
+  updatePassword(id: number, newPassword: string) {
+    return wrap<User>(
+      supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('id', id)
+        .select()
+        .single()
+    )
+  },
 }
 
 // ─── Expenses ─────────────────────────────────────────────────

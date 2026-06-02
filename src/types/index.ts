@@ -47,10 +47,22 @@ export interface User {
   username: string
   displayName: string
   password: string
+  securityQuestion: string  // '' = 尚未設定
+  securityAnswer: string    // 小寫+去空白後儲存
   createdAt: string
 }
 
-export type SafeUser = Omit<User, 'password'>
+// 存入 localStorage 的安全版本：去除密碼與安全答案
+export type SafeUser = Omit<User, 'password' | 'securityAnswer'>
+
+export const SECURITY_QUESTIONS: string[] = [
+  '你的第一隻寵物叫什麼名字？',
+  '你媽媽的英文名字是什麼？',
+  '你小時候住的街道名稱是什麼？',
+  '你最喜歡的老師叫什麼名字？',
+  '你出生的城市是什麼？',
+  '你的小學名稱是什麼？',
+]
 
 export interface Expense {
   id: number

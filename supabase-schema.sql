@@ -5,11 +5,13 @@
 
 -- ── 1. users ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
-  id            BIGSERIAL     PRIMARY KEY,
-  username      TEXT          NOT NULL UNIQUE,
-  password      TEXT          NOT NULL,
-  "displayName" TEXT          NOT NULL DEFAULT '',
-  "createdAt"   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+  id                  BIGSERIAL     PRIMARY KEY,
+  username            TEXT          NOT NULL UNIQUE,
+  password            TEXT          NOT NULL,
+  "displayName"       TEXT          NOT NULL DEFAULT '',
+  "securityQuestion"  TEXT          NOT NULL DEFAULT '',
+  "securityAnswer"    TEXT          NOT NULL DEFAULT '',  -- 小寫+去空白後儲存
+  "createdAt"         TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
 -- ── 2. expenses ──────────────────────────────────────────────────
@@ -101,3 +103,10 @@ GRANT ALL ON "tripExpenses" TO anon, authenticated;
 GRANT ALL ON budgets        TO anon, authenticated;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+
+-- ================================================================
+--  找回密碼功能 — 若 users 資料表已存在，請另外執行此段
+-- ================================================================
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS "securityQuestion" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "securityAnswer"   TEXT NOT NULL DEFAULT '';
