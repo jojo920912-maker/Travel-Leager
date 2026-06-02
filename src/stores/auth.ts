@@ -3,6 +3,13 @@ import { ref, computed } from 'vue'
 import { authApi } from '@/services/api'
 import type { SafeUser } from '@/types'
 
+/** 將任意 error 轉成可讀的字串訊息 */
+function toMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error) return e.message
+  if (typeof e === 'object' && e !== null && 'message' in e) return String((e as any).message)
+  return fallback
+}
+
 const STORAGE_KEY = 'travel_ledger_user'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -25,35 +32,50 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 登入 */
   async function login(username: string, password: string) {
-    const res = await authApi.findByUsername(username.trim())
-    const match = res.data.find((u) => u.password === password)
-    if (!match) throw new Error('帳號或密碼錯誤')
-    const { password: _pw, securityAnswer: _sa, ...safe } = match
-    currentUser.value = safe
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+    try {
+      const res = await authApi.findByUsername(username.trim())
+      const match = res.data.find((u) => u.password === password)
+      if (!match) throw new Error('帳號或密碼錯誤')
+      const { password: _pw, securityAnswer: _sa, ...safe } = match
+      currentUser.value = safe
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+    } catch (e) {
+      throw new Error(toMessage(e, '登入失敗，請稍後再試'))
+    }
   }
 
-  /** 註冊（含安全問題設定） */
+  /**
+   * 註冊（含安全問題設定）
+   * 回傳值：若資料庫尚未有安全問題欄位，securitySaved = false
+   */
   async function register(
     username: string,
     password: string,
     displayName: string,
     securityQuestion: string,
     securityAnswer: string,
-  ) {
-    const existing = await authApi.findByUsername(username.trim())
-    if (existing.data.length) throw new Error('此使用者名稱已被使用')
+  ): Promise<{ securitySaved: boolean }> {
+    try {
+      const existing = await authApi.findByUsername(username.trim())
+      if (existing.data.length) throw new Error('此使用者名稱已被使用')
 
-    const res = await authApi.register({
-      username: username.trim(),
-      password,
-      displayName: displayName.trim() || username.trim(),
-      securityQuestion,
-      securityAnswer: securityAnswer.trim().toLowerCase(),
-    })
-    const { password: _pw, securityAnswer: _sa, ...safe } = res.data
-    currentUser.value = safe
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+      const res = await authApi.register({
+        username: username.trim(),
+        password,
+        displayName: displayName.trim() || username.trim(),
+        securityQuestion,
+        securityAnswer: securityAnswer.trim().toLowerCase(),
+      })
+      const { password: _pw, securityAnswer: _sa, ...safe } = res.data
+      currentUser.value = safe
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+
+      // 確認安全問題是否實際寫入（降級模式下欄位會是 undefined）
+      const securitySaved = !!res.data.securityQuestion
+      return { securitySaved }
+    } catch (e) {
+      throw new Error(toMessage(e, '註冊失敗，請稍後再試'))
+    }
   }
 
   /**

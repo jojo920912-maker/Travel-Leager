@@ -376,13 +376,17 @@ async function handleRegister() {
   loading.value = true
   error.value = ''
   try {
-    await authStore.register(
+    const { securitySaved } = await authStore.register(
       registerForm.value.username,
       registerForm.value.password,
       registerForm.value.displayName,
       registerForm.value.securityQuestion,
       registerForm.value.securityAnswer,
     )
+    if (!securitySaved) {
+      // 資料庫缺少安全問題欄位，帳號已建立但找回密碼功能不可用
+      alert('帳號建立成功！\n\n⚠️ 注意：資料庫尚未更新，「找回密碼」功能目前不可用。\n請在 Supabase SQL Editor 執行 supabase-schema.sql 底部的 ALTER TABLE 語法。')
+    }
     router.push('/')
   } catch (e) {
     error.value = e instanceof Error ? e.message : '註冊失敗'

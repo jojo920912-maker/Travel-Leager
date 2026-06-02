@@ -47,8 +47,8 @@ export interface User {
   username: string
   displayName: string
   password: string
-  securityQuestion: string  // '' = 尚未設定
-  securityAnswer: string    // 小寫+去空白後儲存
+  securityQuestion?: string  // 欄位可能不存在（舊版資料庫）
+  securityAnswer?: string    // 欄位可能不存在（舊版資料庫）
   createdAt: string
 }
 

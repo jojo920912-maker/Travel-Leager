@@ -6,15 +6,23 @@ function now() {
 }
 
 /**
- * 將 Supabase 回傳的 { data, error } 轉換成 { data: T }，
- * 與原本 axios 回傳格式相容，讓 stores 無需修改。
+ * 將 Supabase 回傳的 { data, error } 轉換成 { data: T }。
+ * 將 PostgrestError 包裝成標準 Error，讓錯誤訊息能在 UI 正確顯示。
  */
 async function wrap<T>(
   query: PromiseLike<{ data: T | null; error: any }>
 ): Promise<{ data: T }> {
   const { data, error } = await query
-  if (error) throw error
+  if (error) throw new Error(error.message ?? JSON.stringify(error))
   return { data: data as T }
+}
+
+/** 判斷是否為「欄位不存在」類型的 PostgreSQL 錯誤 */
+function isColumnMissingError(e: unknown): boolean {
+  const msg = (e as Error)?.message ?? ''
+  return msg.includes('column') && (
+    msg.includes('does not exist') || msg.includes('of relation')
+  )
 }
 
 // ─── Auth ─────────────────────────────────────────────────────
@@ -24,15 +32,34 @@ export const authApi = {
       supabase.from('users').select('*').eq('username', username)
     )
   },
-  register(data: Omit<User, 'id' | 'createdAt'>) {
-    return wrap<User>(
-      supabase
-        .from('users')
-        .insert({ ...data, createdAt: now() })
-        .select()
-        .single()
-    )
+
+  /**
+   * 先嘗試含安全問題欄位的 INSERT；
+   * 若資料表尚未有 securityQuestion / securityAnswer 欄位，
+   * 則降級為不含這兩欄的 INSERT，讓基本註冊仍能成功。
+   */
+  async register(data: Omit<User, 'id' | 'createdAt'>): Promise<{ data: User }> {
+    // 嘗試完整 INSERT（含安全問題欄位）
+    const fullPayload = { ...data, createdAt: now() }
+    const full = await supabase.from('users').insert(fullPayload).select().single()
+    if (!full.error) return { data: full.data as User }
+
+    // 若是欄位不存在錯誤，降級為不含安全問題欄位的 INSERT
+    if (isColumnMissingError(new Error(full.error.message))) {
+      const { securityQuestion: _sq, securityAnswer: _sa, ...baseData } = data
+      return wrap<User>(
+        supabase
+          .from('users')
+          .insert({ ...baseData, createdAt: now() })
+          .select()
+          .single()
+      )
+    }
+
+    // 其他錯誤直接拋出
+    throw new Error(full.error.message ?? '註冊失敗')
   },
+
   updatePassword(id: number, newPassword: string) {
     return wrap<User>(
       supabase
