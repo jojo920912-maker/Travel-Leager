@@ -5,9 +5,21 @@ import type { SafeUser } from '@/types'
 
 /** 將任意 error 轉成可讀的字串訊息 */
 function toMessage(e: unknown, fallback: string): string {
-  if (e instanceof Error) return e.message
-  if (typeof e === 'object' && e !== null && 'message' in e) return String((e as any).message)
-  return fallback
+  const raw =
+    e instanceof Error ? e.message
+    : typeof e === 'object' && e !== null && 'message' in e ? String((e as any).message)
+    : fallback
+
+  // 網路層級錯誤（Supabase 無法連線）→ 顯示友善提示
+  if (
+    raw.toLowerCase().includes('failed to fetch') ||
+    raw.toLowerCase().includes('networkerror') ||
+    raw.toLowerCase().includes('econnrefused')
+  ) {
+    return '無法連線到 Supabase 伺服器。請確認：① Supabase 專案未暫停（Dashboard → Restore project）② 重啟 npm run dev'
+  }
+
+  return raw
 }
 
 const STORAGE_KEY = 'travel_ledger_user'
