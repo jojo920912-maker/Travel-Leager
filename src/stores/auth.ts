@@ -25,20 +25,46 @@ function toMessage(e: unknown, fallback: string): string {
 const STORAGE_KEY = 'travel_ledger_user'
 
 export const useAuthStore = defineStore('auth', () => {
-  const currentUser = ref<SafeUser | null>(null)
+  const currentUser    = ref<SafeUser | null>(null)
   const isAuthenticated = computed(() => !!currentUser.value)
+  /** true 期間正在向 Supabase 驗證 session，App.vue 可用來顯示載入畫面 */
+  const initializing   = ref(false)
 
   // ── 找回密碼流程的暫存狀態（不對外暴露）───────────────────────
   const _forgotUserId  = ref<number | null>(null)
   const _forgotAnswer  = ref<string>('')
 
-  /** 從 localStorage 恢復登入狀態 */
+  /** 從 localStorage 同步恢復登入狀態（啟動時立即可用） */
   function restore() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) currentUser.value = JSON.parse(raw) as SafeUser
     } catch {
       localStorage.removeItem(STORAGE_KEY)
+    }
+  }
+
+  /**
+   * 非同步驗證 localStorage 裡的 session 是否在 Supabase 仍然有效。
+   * 應在 App.vue 的 onMounted 裡呼叫一次。
+   * - 若使用者不存在於 Supabase → 自動登出（清除 localStorage）
+   * - 若網路失敗 → 保留現有 session（不強制登出，可能是暫時無連線）
+   */
+  async function init() {
+    if (!currentUser.value) return      // 本來就未登入，無需驗證
+    initializing.value = true
+    try {
+      const res = await authApi.findByUsername(currentUser.value.username)
+      const valid = res.data.some((u) => u.id === currentUser.value!.id)
+      if (!valid) {
+        console.warn('[Auth] localStorage 的 userId 在 Supabase 中不存在，自動清除 session')
+        logout()
+      }
+    } catch (e) {
+      // 網路錯誤（Supabase 暫停等）→ 不強制登出，保留現有 session
+      console.warn('[Auth] Session 驗證時發生網路錯誤，保留現有 session', e)
+    } finally {
+      initializing.value = false
     }
   }
 
@@ -134,8 +160,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    currentUser, isAuthenticated,
-    restore, login, register, logout,
+    currentUser, isAuthenticated, initializing,
+    restore, init, login, register, logout,
     getSecurityQuestion, verifySecurityAnswer, resetPassword,
   }
 })

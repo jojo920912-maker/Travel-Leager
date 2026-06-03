@@ -4,6 +4,19 @@ import { tripApi, memberApi, tripExpenseApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import type { Trip, TripMember, TripExpense, Balance, Settlement } from '@/types'
 
+/** 將 Supabase/網路錯誤轉成使用者友善訊息，並在必要時自動清除無效 session */
+function toFriendlyError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (msg.includes('foreign key') || msg.includes('23503') || msg.includes('violates')) {
+    try { useAuthStore().logout() } catch { /* ignore */ }
+    return new Error('使用者身分無效，已自動登出，請重新登入')
+  }
+  if (msg.toLowerCase().includes('failed to fetch')) {
+    return new Error('無法連線到 Supabase，請確認專案未暫停及網路連線')
+  }
+  return e instanceof Error ? e : new Error(msg)
+}
+
 export const useTripStore = defineStore('trip', () => {
   const trips = ref<Trip[]>([])
   const currentTrip = ref<Trip | null>(null)
@@ -135,51 +148,67 @@ export const useTripStore = defineStore('trip', () => {
   }
 
   async function addTrip(data: Omit<Trip, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) {
-    const res = await tripApi.create({ ...data, userId: getUserId() })
-    trips.value.unshift(res.data)
-    return res.data
+    try {
+      const res = await tripApi.create({ ...data, userId: getUserId() })
+      trips.value.unshift(res.data)
+      return res.data
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function editTrip(id: number, data: Partial<Trip>) {
-    const res = await tripApi.update(id, data)
-    const idx = trips.value.findIndex((t) => t.id === id)
-    if (idx !== -1) trips.value[idx] = res.data
-    if (currentTrip.value?.id === id) currentTrip.value = res.data
-    return res.data
+    try {
+      const res = await tripApi.update(id, data)
+      const idx = trips.value.findIndex((t) => t.id === id)
+      if (idx !== -1) trips.value[idx] = res.data
+      if (currentTrip.value?.id === id) currentTrip.value = res.data
+      return res.data
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function removeTrip(id: number) {
-    await tripApi.delete(id)
-    trips.value = trips.value.filter((t) => t.id !== id)
+    try {
+      await tripApi.delete(id)
+      trips.value = trips.value.filter((t) => t.id !== id)
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function addMember(data: Omit<TripMember, 'id'>) {
-    const res = await memberApi.create(data)
-    members.value.push(res.data)
-    return res.data
+    try {
+      const res = await memberApi.create(data)
+      members.value.push(res.data)
+      return res.data
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function removeMember(id: number) {
-    await memberApi.delete(id)
-    members.value = members.value.filter((m) => m.id !== id)
+    try {
+      await memberApi.delete(id)
+      members.value = members.value.filter((m) => m.id !== id)
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function addTripExpense(data: Omit<TripExpense, 'id' | 'createdAt'>) {
-    const res = await tripExpenseApi.create(data)
-    tripExpenses.value.unshift(res.data)
-    return res.data
+    try {
+      const res = await tripExpenseApi.create(data)
+      tripExpenses.value.unshift(res.data)
+      return res.data
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function editTripExpense(id: number, data: Partial<TripExpense>) {
-    const res = await tripExpenseApi.update(id, data)
-    const idx = tripExpenses.value.findIndex((e) => e.id === id)
-    if (idx !== -1) tripExpenses.value[idx] = res.data
-    return res.data
+    try {
+      const res = await tripExpenseApi.update(id, data)
+      const idx = tripExpenses.value.findIndex((e) => e.id === id)
+      if (idx !== -1) tripExpenses.value[idx] = res.data
+      return res.data
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function removeTripExpense(id: number) {
-    await tripExpenseApi.delete(id)
-    tripExpenses.value = tripExpenses.value.filter((e) => e.id !== id)
+    try {
+      await tripExpenseApi.delete(id)
+      tripExpenses.value = tripExpenses.value.filter((e) => e.id !== id)
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   return {

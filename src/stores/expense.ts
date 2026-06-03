@@ -4,12 +4,14 @@ import { expenseApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import type { Expense, ExpenseCategory } from '@/types'
 
-/** 將 Supabase/網路錯誤轉成使用者友善訊息 */
+/** 將 Supabase/網路錯誤轉成使用者友善訊息，並在必要時自動清除無效 session */
 function toFriendlyError(e: unknown): Error {
   const msg = e instanceof Error ? e.message : String(e)
-  // 外鍵違反：userId 在 users 表中不存在（舊 localStorage 殘留）
+  // 外鍵違反：userId 在 users 表中不存在（舊 localStorage 殘留 / 帳號不一致）
+  // → 自動登出，讓 App.vue 的 watch 將使用者導回登入頁
   if (msg.includes('foreign key') || msg.includes('23503') || msg.includes('violates')) {
-    return new Error('使用者身分已過期，請先登出再重新登入')
+    try { useAuthStore().logout() } catch { /* ignore */ }
+    return new Error('使用者身分無效，已自動登出，請重新登入')
   }
   // 資料表不存在
   if (msg.includes('does not exist') && msg.includes('relation')) {
@@ -67,7 +69,7 @@ export const useExpenseStore = defineStore('expense', () => {
       const res = await expenseApi.getAll(getUserId(), params)
       expenses.value = res.data
     } catch (e) {
-      error.value = '載入失敗，請確認 API 服務正在執行'
+      error.value = toFriendlyError(e).message
       console.error(e)
     } finally {
       loading.value = false
