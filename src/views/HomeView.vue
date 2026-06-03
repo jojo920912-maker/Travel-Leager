@@ -20,6 +20,9 @@
       <div class="stat-card">
         <div class="stat-label">進行中旅程</div>
         <div class="stat-value">{{ activeTrips.length }}</div>
+        <div v-if="upcomingTrips.length" class="stat-sub-hint">
+          +{{ upcomingTrips.length }} 即將到來
+        </div>
       </div>
     </div>
 
@@ -88,7 +91,7 @@
     <!-- Active trips -->
     <div v-if="activeTrips.length" class="section">
       <div class="section-header">
-        <h3>進行中旅程</h3>
+        <h3>✈️ 進行中旅程</h3>
         <RouterLink to="/trips" class="btn btn-ghost btn-sm">查看全部 →</RouterLink>
       </div>
       <div class="trip-list-sm">
@@ -96,14 +99,48 @@
           v-for="t in activeTrips"
           :key="t.id"
           :to="`/trips/${t.id}`"
-          class="trip-sm-card card"
+          class="trip-sm-card card trip-sm-active"
         >
           <span class="trip-sm-icon">✈️</span>
           <div class="trip-sm-info">
             <span class="trip-sm-name">{{ t.name }}</span>
-            <span class="trip-sm-date">{{ t.startDate }}</span>
+            <span class="trip-sm-date">{{ t.startDate }}<template v-if="t.endDate"> → {{ t.endDate }}</template></span>
           </div>
           <span class="trip-sm-cur">{{ t.currency }}</span>
+        </RouterLink>
+      </div>
+    </div>
+
+    <!-- Upcoming trips -->
+    <div v-if="upcomingTrips.length" class="section">
+      <div class="section-header">
+        <h3>🗓️ 即將到來</h3>
+        <RouterLink to="/trips" class="btn btn-ghost btn-sm">查看全部 →</RouterLink>
+      </div>
+      <div class="trip-list-sm">
+        <RouterLink
+          v-for="t in upcomingTrips"
+          :key="t.id"
+          :to="`/trips/${t.id}`"
+          class="trip-sm-card card trip-sm-upcoming"
+        >
+          <span class="trip-sm-icon">🗺️</span>
+          <div class="trip-sm-info">
+            <span class="trip-sm-name">{{ t.name }}</span>
+            <div class="trip-sm-timeline">
+              <span class="tl-now-label">{{ nowMonthLabel }}</span>
+              <div class="tl-mini-track">
+                <div class="tl-mini-dot start" />
+                <div class="tl-mini-line" />
+                <div class="tl-mini-dot end" />
+              </div>
+              <span class="tl-start-label">{{ monthLabel(t.startDate) }}</span>
+            </div>
+          </div>
+          <div class="trip-sm-right">
+            <span class="countdown-chip">{{ getCountdownText(t.startDate) }}</span>
+            <span class="trip-sm-cur">{{ t.currency }}</span>
+          </div>
         </RouterLink>
       </div>
     </div>
@@ -122,6 +159,7 @@ import { useBudgetStore } from '@/stores/budget'
 import { CATEGORY_META } from '@/types'
 import type { Expense } from '@/types'
 import { useToast } from '@/composables/useToast'
+import { getTripStatus, getCountdownText, toMonthLabel, todayMonthLabel } from '@/utils/tripStatus'
 
 const expenseStore = useExpenseStore()
 const tripStore = useTripStore()
@@ -151,7 +189,21 @@ const budgetPctClass = computed(() => {
   if (budgetPct.value >= 80)  return 'warning'
   return 'safe'
 })
-const activeTrips = computed(() => tripStore.trips.slice(0, 3))
+
+// ── 旅程分群（依狀態）─────────────────────────────────────────
+const activeTrips = computed(() =>
+  tripStore.trips.filter((t) => getTripStatus(t.startDate, t.endDate) === 'active')
+)
+const upcomingTrips = computed(() =>
+  tripStore.trips
+    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming')
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .slice(0, 3)   // 首頁只顯示最近 3 筆
+)
+
+// 當月標籤（不含年份）
+const nowMonthLabel = todayMonthLabel()
+const monthLabel    = toMonthLabel
 
 function barWidth(category: string) {
   const max = Math.max(...Object.values(expenseStore.byCategory))
@@ -167,8 +219,13 @@ function openEdit(expense: Expense) {
 
 async function deleteExpense(id: number) {
   if (!confirm('確定要刪除這筆記帳？')) return
-  await expenseStore.removeExpense(id)
-  showToast('已刪除')
+  try {
+    await expenseStore.removeExpense(id)
+    showToast('已刪除')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '刪除失敗'
+    showToast(msg, 'error')
+  }
 }
 
 async function reload() {
@@ -246,6 +303,13 @@ onMounted(async () => {
 
 .expense-list { display: flex; flex-direction: column; gap: 8px; }
 
+.stat-sub-hint {
+  font-size: 0.7rem;
+  color: #6366F1;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 .trip-list-sm { display: flex; flex-direction: column; gap: 8px; }
 
 .trip-sm-card {
@@ -256,19 +320,76 @@ onMounted(async () => {
   text-decoration: none;
   color: var(--text);
   transition: all var(--transition);
+  border-left: 3px solid transparent;
 }
 .trip-sm-card:hover { transform: translateX(4px); }
+.trip-sm-active   { border-left-color: var(--mint); }
+.trip-sm-upcoming { border-left-color: #6366F1; }
 
-.trip-sm-icon { font-size: 1.5rem; }
+.trip-sm-icon { font-size: 1.5rem; flex-shrink: 0; }
 
 .trip-sm-info {
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .trip-sm-name { font-weight: 600; font-size: 0.9rem; }
 .trip-sm-date { font-size: 0.75rem; color: var(--text-light); }
+
+/* Upcoming mini-timeline */
+.trip-sm-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+}
+
+.tl-now-label   { color: var(--text-muted); font-weight: 600; }
+.tl-start-label { color: #6366F1; font-weight: 700; }
+
+.tl-mini-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  min-width: 32px;
+}
+.tl-mini-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tl-mini-dot.start { background: var(--text-muted); }
+.tl-mini-dot.end   { background: #6366F1; }
+.tl-mini-line {
+  flex: 1;
+  height: 1.5px;
+  background: linear-gradient(to right, var(--border), #6366F1);
+  min-width: 20px;
+}
+
+/* Right side of upcoming card */
+.trip-sm-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.countdown-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6366F1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
 .trip-sm-cur {
   font-size: 0.75rem;
   font-weight: 600;

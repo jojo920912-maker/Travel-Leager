@@ -3,7 +3,11 @@
     <div class="page-header">
       <div>
         <h1>旅行分帳</h1>
-        <p class="sub">{{ store.trips.length }} 個旅程</p>
+        <p class="sub">
+          {{ store.trips.length }} 個旅程
+          <template v-if="activeTrips.length">・{{ activeTrips.length }} 進行中</template>
+          <template v-if="upcomingTrips.length">・{{ upcomingTrips.length }} 即將到來</template>
+        </p>
       </div>
       <button class="btn btn-primary" @click="openAdd" title="新增旅程 (N)">
         <Plus :size="16" />
@@ -40,16 +44,64 @@
       <button class="btn btn-primary" @click="openAdd">建立第一個旅程</button>
     </div>
 
-    <div v-else class="trips-grid">
-      <TripCard
-        v-for="t in store.trips"
-        :key="t.id"
-        :trip="t"
-        @click="router.push(`/trips/${t.id}`)"
-        @edit="openEdit(t)"
-        @delete="confirmDelete(t.id)"
-      />
-    </div>
+    <template v-else>
+      <!-- 進行中 -->
+      <div v-if="activeTrips.length" class="trip-section">
+        <div class="trip-section-header">
+          <span class="section-dot dot-active" />
+          <h2 class="section-title">進行中</h2>
+          <span class="section-count">{{ activeTrips.length }}</span>
+        </div>
+        <div class="trips-grid">
+          <TripCard
+            v-for="t in activeTrips"
+            :key="t.id"
+            :trip="t"
+            @click="router.push(`/trips/${t.id}`)"
+            @edit="openEdit(t)"
+            @delete="confirmDelete(t.id)"
+          />
+        </div>
+      </div>
+
+      <!-- 即將到來 -->
+      <div v-if="upcomingTrips.length" class="trip-section">
+        <div class="trip-section-header">
+          <span class="section-dot dot-upcoming" />
+          <h2 class="section-title">即將到來</h2>
+          <span class="section-count">{{ upcomingTrips.length }}</span>
+        </div>
+        <div class="trips-grid">
+          <TripCard
+            v-for="t in upcomingTrips"
+            :key="t.id"
+            :trip="t"
+            @click="router.push(`/trips/${t.id}`)"
+            @edit="openEdit(t)"
+            @delete="confirmDelete(t.id)"
+          />
+        </div>
+      </div>
+
+      <!-- 已完成 -->
+      <div v-if="completedTrips.length" class="trip-section">
+        <div class="trip-section-header">
+          <span class="section-dot dot-completed" />
+          <h2 class="section-title">已完成</h2>
+          <span class="section-count">{{ completedTrips.length }}</span>
+        </div>
+        <div class="trips-grid trips-grid-completed">
+          <TripCard
+            v-for="t in completedTrips"
+            :key="t.id"
+            :trip="t"
+            @click="router.push(`/trips/${t.id}`)"
+            @edit="openEdit(t)"
+            @delete="confirmDelete(t.id)"
+          />
+        </div>
+      </div>
+    </template>
 
     <TripForm
       v-model="showForm"
@@ -100,6 +152,7 @@ import { useBudgetStore } from '@/stores/budget'
 import type { Trip } from '@/types'
 import { useToast } from '@/composables/useToast'
 import { useKeyboard } from '@/composables/useKeyboard'
+import { getTripStatus } from '@/utils/tripStatus'
 
 const store = useTripStore()
 const budgetStore = useBudgetStore()
@@ -127,6 +180,21 @@ const tripPctClass = computed(() => {
   const p = tripPct.value
   return p >= 100 ? 'danger' : p >= 80 ? 'warning' : 'safe'
 })
+
+// ─── 依狀態分群 ────────────────────────────────────────────────
+const activeTrips    = computed(() =>
+  store.trips.filter((t) => getTripStatus(t.startDate, t.endDate) === 'active')
+)
+const upcomingTrips  = computed(() =>
+  store.trips
+    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming')
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))   // 最近的排前面
+)
+const completedTrips = computed(() =>
+  store.trips
+    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'completed')
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))   // 最新完成的排前面
+)
 
 // ─── 分配 Modal ────────────────────────────────────────────────
 const showBudgetModal = ref(false)
@@ -228,11 +296,46 @@ onMounted(async () => {
 .bm-fill.warning { background: #F59E0B; }
 .bm-fill.danger  { background: #EF4444; }
 
+.trip-section { margin-bottom: 28px; }
+
+.trip-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-active    { background: var(--mint); }
+.dot-upcoming  { background: #6366F1; }
+.dot-completed { background: var(--border); }
+
+.section-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--border-light);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+}
+
 .trips-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+.trips-grid-completed { opacity: 0.82; }
 .loading { color: var(--text-light); padding: 40px; text-align: center; }
 
 /* Alloc modal */
