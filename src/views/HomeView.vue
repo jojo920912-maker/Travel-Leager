@@ -18,10 +18,13 @@
         <div class="stat-value">{{ monthExpenses.length }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">進行中旅程</div>
-        <div class="stat-value">{{ activeTrips.length }}</div>
-        <div v-if="upcomingTrips.length" class="stat-sub-hint">
-          +{{ upcomingTrips.length }} 即將到來
+        <div class="stat-label">旅程</div>
+        <div class="stat-value">{{ tripStore.trips.length }}</div>
+        <div class="stat-trip-tags">
+          <span v-if="activeTrips.length"   class="tag-dot dot-active">{{ activeTrips.length }} 進行中</span>
+          <span v-if="upcomingTrips.length"  class="tag-dot dot-upcoming">{{ upcomingTrips.length }} 即將到來</span>
+          <span v-if="completedTrips.length" class="tag-dot dot-done">{{ completedTrips.length }} 已完成</span>
+          <span v-if="!tripStore.trips.length" class="tag-dot dot-none">尚無旅程</span>
         </div>
       </div>
     </div>
@@ -145,6 +148,43 @@
       </div>
     </div>
 
+    <!-- Completed trips (recent 3) -->
+    <div v-if="recentCompletedTrips.length" class="section">
+      <div class="section-header">
+        <h3>🗺️ 已完成旅程</h3>
+        <RouterLink to="/trips" class="btn btn-ghost btn-sm">查看全部 →</RouterLink>
+      </div>
+      <div class="trip-list-sm">
+        <RouterLink
+          v-for="t in recentCompletedTrips"
+          :key="t.id"
+          :to="`/trips/${t.id}`"
+          class="trip-sm-card card trip-sm-completed"
+        >
+          <span class="trip-sm-icon">✅</span>
+          <div class="trip-sm-info">
+            <span class="trip-sm-name">{{ t.name }}</span>
+            <span class="trip-sm-date">
+              {{ t.startDate }}<template v-if="t.endDate"> → {{ t.endDate }}</template>
+            </span>
+          </div>
+          <span class="trip-sm-cur trip-sm-cur-done">{{ t.currency }}</span>
+        </RouterLink>
+      </div>
+    </div>
+
+    <!-- Empty trip state (no trips at all) -->
+    <div v-if="!tripStore.trips.length && !tripStore.loading" class="section">
+      <div class="section-header">
+        <h3>✈️ 旅程</h3>
+        <RouterLink to="/trips" class="btn btn-ghost btn-sm">前往新增 →</RouterLink>
+      </div>
+      <div class="empty-state" style="padding: 20px 0;">
+        <span class="emoji">🗺️</span>
+        <p>還沒有旅程，去計畫一趟吧！</p>
+      </div>
+    </div>
+
     <ExpenseForm v-model="showForm" :expense="editTarget" @saved="reload" />
   </div>
 </template>
@@ -197,8 +237,22 @@ const activeTrips = computed(() =>
 const upcomingTrips = computed(() =>
   tripStore.trips
     .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming')
-    .sort((a, b) => a.startDate.localeCompare(b.startDate))
-    .slice(0, 3)   // 首頁只顯示最近 3 筆
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))   // 最近出發的排前面
+    .slice(0, 3)
+)
+const completedTrips = computed(() =>
+  tripStore.trips.filter((t) => getTripStatus(t.startDate, t.endDate) === 'completed')
+)
+// 首頁顯示最近完成的 3 筆（依結束日或開始日倒序）
+const recentCompletedTrips = computed(() =>
+  completedTrips.value
+    .slice()
+    .sort((a, b) => {
+      const da = a.endDate || a.startDate
+      const db = b.endDate || b.startDate
+      return db.localeCompare(da)
+    })
+    .slice(0, 3)
 )
 
 // 當月標籤（不含年份）
@@ -303,12 +357,23 @@ onMounted(async () => {
 
 .expense-list { display: flex; flex-direction: column; gap: 8px; }
 
-.stat-sub-hint {
-  font-size: 0.7rem;
-  color: #6366F1;
-  font-weight: 600;
-  margin-top: 2px;
+/* Stat card trip tags */
+.stat-trip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 }
+.tag-dot {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+}
+.dot-active   { background: rgba(92, 200, 190, 0.18); color: var(--mint-dark); }
+.dot-upcoming { background: rgba(99, 102, 241, 0.12); color: #6366F1; }
+.dot-done     { background: var(--border-light); color: var(--text-muted); }
+.dot-none     { background: var(--border-light); color: var(--text-muted); }
 
 .trip-list-sm { display: flex; flex-direction: column; gap: 8px; }
 
@@ -390,6 +455,8 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
+.trip-sm-completed { border-left-color: var(--border); opacity: 0.8; }
+
 .trip-sm-cur {
   font-size: 0.75rem;
   font-weight: 600;
@@ -397,6 +464,11 @@ onMounted(async () => {
   color: var(--mint-dark);
   padding: 2px 10px;
   border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.trip-sm-cur-done {
+  background: var(--border-light);
+  color: var(--text-muted);
 }
 
 /* Budget summary card */
