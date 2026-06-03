@@ -7,12 +7,23 @@ import type { Expense, ExpenseCategory } from '@/types'
 /** 將 Supabase/網路錯誤轉成使用者友善訊息，並在必要時自動清除無效 session */
 function toFriendlyError(e: unknown): Error {
   const msg = e instanceof Error ? e.message : String(e)
-  // 外鍵違反：userId 在 users 表中不存在（舊 localStorage 殘留 / 帳號不一致）
-  // → 自動登出，讓 App.vue 的 watch 將使用者導回登入頁
-  if (msg.includes('foreign key') || msg.includes('23503') || msg.includes('violates')) {
+
+  // ── 外鍵違反（error code 23503）：userId 不在 users 表中 ──────────
+  // 僅比對 "foreign key" 或 "23503"；不用 "violates" 因為它也會
+  // 匹配到 RLS 錯誤，導致誤判並把合法使用者自動登出
+  if (msg.includes('foreign key') || msg.includes('23503')) {
     try { useAuthStore().logout() } catch { /* ignore */ }
     return new Error('使用者身分無效，已自動登出，請重新登入')
   }
+
+  // ── Row-Level Security 違反 ───────────────────────────────────────
+  // 與 FK 分開處理，不觸發自動登出，改為提示使用者去 Supabase 停用 RLS
+  if (msg.includes('row-level security') || msg.includes('security policy')) {
+    return new Error(
+      '資料庫 RLS 政策阻擋了寫入。\n請至 Supabase → Table Editor → 每張資料表 → 停用 Row Level Security，或執行最新 supabase-schema.sql'
+    )
+  }
+
   // 資料表不存在
   if (msg.includes('does not exist') && msg.includes('relation')) {
     return new Error('資料表尚未建立，請在 Supabase SQL Editor 執行 supabase-schema.sql')

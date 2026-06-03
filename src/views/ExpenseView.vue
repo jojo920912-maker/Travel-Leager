@@ -232,8 +232,14 @@ function openEdit(expense: Expense) {
 
 async function confirmDelete(id: number) {
   if (!confirm('確定要刪除這筆記帳？')) return
-  await store.removeExpense(id)
-  showToast('已刪除')
+  try {
+    await store.removeExpense(id)
+    showToast('已刪除')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '刪除失敗，請重試'
+    console.error('[ExpenseView delete]', e)
+    showToast(msg, 'error')
+  }
 }
 
 async function reload() {

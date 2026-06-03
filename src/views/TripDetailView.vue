@@ -178,8 +178,14 @@ function openEditExpense(e: TripExpense) {
 
 async function deleteExpense(id: number) {
   if (!confirm('確定要刪除這筆支出？')) return
-  await store.removeTripExpense(id)
-  showToast('已刪除')
+  try {
+    await store.removeTripExpense(id)
+    showToast('已刪除')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '刪除失敗'
+    console.error('[TripDetailView delete]', e)
+    showToast(msg, 'error')
+  }
 }
 
 function openAdd() {
@@ -195,11 +201,17 @@ onMounted(async () => {
   if (!store.members.length) {
     const user = authStore.currentUser
     if (user) {
-      await store.addMember({
-        tripId: props.id,
-        name: user.displayName ?? user.username,
-        color: '#5CC8BE',
-      })
+      try {
+        await store.addMember({
+          tripId: props.id,
+          name: user.displayName ?? user.username,
+          color: '#5CC8BE',
+        })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '自動加入成員失敗'
+        console.error('[TripDetailView autoAddMember]', e)
+        showToast(msg, 'error')
+      }
     }
   }
 })

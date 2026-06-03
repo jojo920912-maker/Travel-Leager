@@ -7,9 +7,20 @@ import type { Trip, TripMember, TripExpense, Balance, Settlement } from '@/types
 /** 將 Supabase/網路錯誤轉成使用者友善訊息，並在必要時自動清除無效 session */
 function toFriendlyError(e: unknown): Error {
   const msg = e instanceof Error ? e.message : String(e)
-  if (msg.includes('foreign key') || msg.includes('23503') || msg.includes('violates')) {
+
+  // 外鍵違反（23503）→ 自動登出
+  if (msg.includes('foreign key') || msg.includes('23503')) {
     try { useAuthStore().logout() } catch { /* ignore */ }
     return new Error('使用者身分無效，已自動登出，請重新登入')
+  }
+  // RLS 政策違反 → 提示停用，不登出
+  if (msg.includes('row-level security') || msg.includes('security policy')) {
+    return new Error(
+      '資料庫 RLS 政策阻擋了寫入。\n請至 Supabase → Table Editor → 每張資料表 → 停用 Row Level Security，或執行最新 supabase-schema.sql'
+    )
+  }
+  if (msg.includes('does not exist') && msg.includes('relation')) {
+    return new Error('資料表尚未建立，請在 Supabase SQL Editor 執行 supabase-schema.sql')
   }
   if (msg.toLowerCase().includes('failed to fetch')) {
     return new Error('無法連線到 Supabase，請確認專案未暫停及網路連線')

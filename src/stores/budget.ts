@@ -6,6 +6,24 @@ import { useExpenseStore } from '@/stores/expense'
 import { useTripStore } from '@/stores/trip'
 import type { Budget, ExpenseCategory } from '@/types'
 
+/** 將 Supabase/網路錯誤轉成使用者友善訊息 */
+function toFriendlyError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (msg.includes('foreign key') || msg.includes('23503')) {
+    try { useAuthStore().logout() } catch { /* ignore */ }
+    return new Error('使用者身分無效，已自動登出，請重新登入')
+  }
+  if (msg.includes('row-level security') || msg.includes('security policy')) {
+    return new Error(
+      '資料庫 RLS 政策阻擋了寫入。\n請至 Supabase → Table Editor → 每張資料表 → 停用 Row Level Security，或執行最新 supabase-schema.sql'
+    )
+  }
+  if (msg.toLowerCase().includes('failed to fetch')) {
+    return new Error('無法連線到 Supabase，請確認專案未暫停及網路連線')
+  }
+  return e instanceof Error ? e : new Error(msg)
+}
+
 export const useBudgetStore = defineStore('budget', () => {
   const budgets = ref<Budget[]>([])
   const loading = ref(false)
@@ -90,52 +108,58 @@ export const useBudgetStore = defineStore('budget', () => {
     tripBudget: number,
     categories: Partial<Record<ExpenseCategory, number>>,
   ) {
-    const existing = budgets.value.find((b) => b.month === month)
-    if (existing) {
-      const res = await budgetApi.update(existing.id, { total, dailyBudget, tripBudget, categories })
-      const idx = budgets.value.findIndex((b) => b.id === existing.id)
-      if (idx !== -1) budgets.value[idx] = res.data
-      return res.data
-    } else {
-      const res = await budgetApi.create({
-        userId: getUserId(),
-        month,
-        total,
-        dailyBudget,
-        tripBudget,
-        categories,
-      })
-      budgets.value.push(res.data)
-      return res.data
-    }
+    try {
+      const existing = budgets.value.find((b) => b.month === month)
+      if (existing) {
+        const res = await budgetApi.update(existing.id, { total, dailyBudget, tripBudget, categories })
+        const idx = budgets.value.findIndex((b) => b.id === existing.id)
+        if (idx !== -1) budgets.value[idx] = res.data
+        return res.data
+      } else {
+        const res = await budgetApi.create({
+          userId: getUserId(),
+          month,
+          total,
+          dailyBudget,
+          tripBudget,
+          categories,
+        })
+        budgets.value.push(res.data)
+        return res.data
+      }
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   // 快速更新單一分配（從記帳/旅行頁呼叫）
   async function updateAllocation(month: string, type: 'daily' | 'trip', amount: number) {
-    const existing = budgets.value.find((b) => b.month === month)
-    if (existing) {
-      const patch = type === 'daily'
-        ? { dailyBudget: amount }
-        : { tripBudget: amount }
-      const res = await budgetApi.update(existing.id, patch)
-      const idx = budgets.value.findIndex((b) => b.id === existing.id)
-      if (idx !== -1) budgets.value[idx] = res.data
-      return res.data
-    } else {
-      // 沒有該月預算 → 建立新的
-      return saveBudget(
-        month,
-        0,
-        type === 'daily' ? amount : 0,
-        type === 'trip' ? amount : 0,
-        {},
-      )
-    }
+    try {
+      const existing = budgets.value.find((b) => b.month === month)
+      if (existing) {
+        const patch = type === 'daily'
+          ? { dailyBudget: amount }
+          : { tripBudget: amount }
+        const res = await budgetApi.update(existing.id, patch)
+        const idx = budgets.value.findIndex((b) => b.id === existing.id)
+        if (idx !== -1) budgets.value[idx] = res.data
+        return res.data
+      } else {
+        // 沒有該月預算 → 建立新的
+        return saveBudget(
+          month,
+          0,
+          type === 'daily' ? amount : 0,
+          type === 'trip' ? amount : 0,
+          {},
+        )
+      }
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   async function removeBudget(id: number) {
-    await budgetApi.delete(id)
-    budgets.value = budgets.value.filter((b) => b.id !== id)
+    try {
+      await budgetApi.delete(id)
+      budgets.value = budgets.value.filter((b) => b.id !== id)
+    } catch (e) { throw toFriendlyError(e) }
   }
 
   return {

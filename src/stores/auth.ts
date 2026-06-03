@@ -55,10 +55,18 @@ export const useAuthStore = defineStore('auth', () => {
     initializing.value = true
     try {
       const res = await authApi.findByUsername(currentUser.value.username)
-      const valid = res.data.some((u) => u.id === currentUser.value!.id)
-      if (!valid) {
-        console.warn('[Auth] localStorage 的 userId 在 Supabase 中不存在，自動清除 session')
-        logout()
+
+      if (res.data.length === 0) {
+        // 查無資料：可能是 users 表 RLS 阻擋了 SELECT（常見於尚未設定 Supabase 的情況）
+        // 保守起見：不強制登出，讓後續操作（expense/trip 寫入）自行處理
+        console.warn('[Auth] findByUsername 回傳空陣列（可能是 RLS 阻擋），保留現有 session')
+      } else {
+        // 用 Number() 做嚴格型別安全比較（Supabase 可能回傳 string 型別的 id）
+        const valid = res.data.some((u) => Number(u.id) === Number(currentUser.value!.id))
+        if (!valid) {
+          console.warn('[Auth] localStorage 的 userId 與 Supabase 不符，自動清除 session')
+          logout()
+        }
       }
     } catch (e) {
       // 網路錯誤（Supabase 暫停等）→ 不強制登出，保留現有 session

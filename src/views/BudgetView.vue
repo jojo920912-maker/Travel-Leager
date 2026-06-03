@@ -397,8 +397,14 @@ async function handleSave() {
 async function handleDelete() {
   if (!currentBudget.value) return
   if (!confirm(`確定要刪除 ${displayMonth.value} 的預算設定？`)) return
-  await budgetStore.removeBudget(currentBudget.value.id)
-  showToast('已刪除預算')
+  try {
+    await budgetStore.removeBudget(currentBudget.value.id)
+    showToast('已刪除預算')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '刪除失敗，請重試'
+    console.error('[BudgetView delete]', e)
+    showToast(msg, 'error')
+  }
 }
 
 // ─── 載入 ──────────────────────────────────────────────────────

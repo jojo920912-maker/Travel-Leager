@@ -165,8 +165,14 @@ function openEdit(trip: Trip) {
 
 async function confirmDelete(id: number) {
   if (!confirm('確定要刪除這個旅程？此操作無法復原。')) return
-  await store.removeTrip(id)
-  showToast('旅程已刪除')
+  try {
+    await store.removeTrip(id)
+    showToast('旅程已刪除')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '刪除失敗，請重試'
+    console.error('[TripView delete]', e)
+    showToast(msg, 'error')
+  }
 }
 
 useKeyboard({ n: openAdd, N: openAdd })
