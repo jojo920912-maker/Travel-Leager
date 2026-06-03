@@ -74,8 +74,10 @@ async function addMember() {
     newName.value = ''
     showInput.value = false
     showToast(`已加入 ${name} ✓`)
-  } catch {
-    showToast('新增失敗', 'error')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '新增失敗'
+    console.error('[MemberManager add]', e)
+    showToast(msg, 'error')
   }
 }
 
@@ -83,8 +85,10 @@ async function removeMember(id: number) {
   try {
     await store.removeMember(id)
     showToast('已移除成員')
-  } catch {
-    showToast('移除失敗', 'error')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '移除失敗'
+    console.error('[MemberManager remove]', e)
+    showToast(msg, 'error')
   }
 }
 </script>

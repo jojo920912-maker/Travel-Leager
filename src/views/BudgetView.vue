@@ -385,8 +385,10 @@ async function handleSave() {
     )
     showToast('預算已儲存 ✓')
     showForm.value = false
-  } catch {
-    showToast('儲存失敗，請重試')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '儲存失敗，請重試'
+    console.error('[BudgetView save]', e)
+    showToast(msg, 'error')
   } finally {
     saving.value = false
   }

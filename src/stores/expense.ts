@@ -4,6 +4,28 @@ import { expenseApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import type { Expense, ExpenseCategory } from '@/types'
 
+/** 將 Supabase/網路錯誤轉成使用者友善訊息 */
+function toFriendlyError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e)
+  // 外鍵違反：userId 在 users 表中不存在（舊 localStorage 殘留）
+  if (msg.includes('foreign key') || msg.includes('23503') || msg.includes('violates')) {
+    return new Error('使用者身分已過期，請先登出再重新登入')
+  }
+  // 資料表不存在
+  if (msg.includes('does not exist') && msg.includes('relation')) {
+    return new Error('資料表尚未建立，請在 Supabase SQL Editor 執行 supabase-schema.sql')
+  }
+  // 欄位不存在
+  if (msg.includes('does not exist') && msg.includes('column')) {
+    return new Error('資料表欄位不符，請執行最新版 supabase-schema.sql 更新欄位')
+  }
+  // 網路失敗
+  if (msg.toLowerCase().includes('failed to fetch')) {
+    return new Error('無法連線到 Supabase，請確認專案未暫停及網路連線')
+  }
+  return e instanceof Error ? e : new Error(msg)
+}
+
 export const useExpenseStore = defineStore('expense', () => {
   const expenses = ref<Expense[]>([])
   const loading = ref(false)
@@ -53,21 +75,33 @@ export const useExpenseStore = defineStore('expense', () => {
   }
 
   async function addExpense(data: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) {
-    const res = await expenseApi.create({ ...data, userId: getUserId() })
-    expenses.value.unshift(res.data)
-    return res.data
+    try {
+      const res = await expenseApi.create({ ...data, userId: getUserId() })
+      expenses.value.unshift(res.data)
+      return res.data
+    } catch (e: any) {
+      throw toFriendlyError(e)
+    }
   }
 
   async function editExpense(id: number, data: Partial<Expense>) {
-    const res = await expenseApi.update(id, data)
-    const idx = expenses.value.findIndex((e) => e.id === id)
-    if (idx !== -1) expenses.value[idx] = res.data
-    return res.data
+    try {
+      const res = await expenseApi.update(id, data)
+      const idx = expenses.value.findIndex((exp) => exp.id === id)
+      if (idx !== -1) expenses.value[idx] = res.data
+      return res.data
+    } catch (e: any) {
+      throw toFriendlyError(e)
+    }
   }
 
   async function removeExpense(id: number) {
-    await expenseApi.delete(id)
-    expenses.value = expenses.value.filter((e) => e.id !== id)
+    try {
+      await expenseApi.delete(id)
+      expenses.value = expenses.value.filter((e) => e.id !== id)
+    } catch (e: any) {
+      throw toFriendlyError(e)
+    }
   }
 
   function filterByCategory(category: ExpenseCategory | 'all') {

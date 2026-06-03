@@ -257,8 +257,10 @@ async function submit() {
     }
     show.value = false
     emit('saved')
-  } catch {
-    showToast('操作失敗，請重試', 'error')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '操作失敗，請重試'
+    console.error('[TripExpenseForm]', e)
+    showToast(msg, 'error')
   } finally {
     saving.value = false
   }

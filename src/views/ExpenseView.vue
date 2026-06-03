@@ -182,8 +182,9 @@ async function saveAlloc() {
     await budgetStore.updateAllocation(monthKey.value, 'daily', allocInput.value)
     showToast('記帳預算已更新 ✓')
     showBudgetModal.value = false
-  } catch {
-    showToast('儲存失敗', 'error')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '儲存失敗'
+    showToast(msg, 'error')
   } finally {
     allocSaving.value = false
   }
