@@ -38,15 +38,16 @@ export function monthsUntil(dateStr: string): number {
 
 /**
  * 倒數文字：
- * - 今天出發  → "今日出發！"
- * - ≤ 30 天  → "還有 N 天"
- * - > 30 天  → "還有 N 個月"
+ * - 今天出發       → "今日出發！"
+ * - 距今 ≤ 2 個月  → "即將到來"（月份相近，不顯示具體數字）
+ * - 距今 > 2 個月  → "還有 N 個月"
  */
 export function getCountdownText(dateStr: string): string {
-  const days = daysUntil(dateStr)
-  if (days <= 0)  return '今日出發！'
-  if (days <= 30) return `還有 ${days} 天`
-  return `還有 ${monthsUntil(dateStr)} 個月`
+  const days   = daysUntil(dateStr)
+  const months = monthsUntil(dateStr)
+  if (days   <= 0) return '今日出發！'
+  if (months <= 2) return '即將到來'
+  return `還有 ${months} 個月`
 }
 
 /** 月份標籤，e.g. "6月" */
