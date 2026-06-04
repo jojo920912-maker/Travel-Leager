@@ -66,14 +66,17 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 
 <style scoped>
 .init-loading {
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
   gap: 16px;
+  background: var(--bg, #f5f7f6);
   color: var(--text-light);
   font-size: 0.9rem;
+  z-index: 9999;
 }
 
 .init-spinner {
