@@ -17,7 +17,6 @@
       >
         <component :is="item.icon" :size="20" />
         <span>{{ item.label }}</span>
-        <span class="nav-key kbd">{{ item.key }}</span>
       </RouterLink>
     </nav>
 
@@ -148,16 +147,6 @@ useKeyboard({
   font-weight: 600;
 }
 
-.nav-key {
-  margin-left: auto;
-  opacity: 0;
-  transition: opacity var(--transition);
-}
-
-.nav-item:hover .nav-key,
-.nav-item.active .nav-key {
-  opacity: 1;
-}
 
 /* User section */
 .sidebar-user {
