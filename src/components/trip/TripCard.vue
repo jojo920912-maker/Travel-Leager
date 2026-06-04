@@ -1,7 +1,7 @@
 <template>
   <div
     class="trip-card card card-interactive"
-    :class="`status-${tripStatus}`"
+    :class="cardStatusClass"
     @click="$emit('click')"
     @keydown.enter="$emit('click')"
     tabindex="0"
@@ -11,7 +11,7 @@
     <div class="trip-card-header">
       <div class="trip-icon">{{ tripStatus === 'completed' ? '🗺️' : '✈️' }}</div>
       <div class="header-right">
-        <span class="status-badge" :class="`badge-${tripStatus}`">
+        <span class="status-badge" :class="badgeClass">
           {{ statusLabel }}
         </span>
         <div class="trip-actions" @click.stop>
@@ -64,17 +64,29 @@ import {
   getCountdownText,
   toMonthLabel,
   todayMonthLabel,
+  isSoon,
 } from '@/utils/tripStatus'
 
 const props = defineProps<{ trip: Trip }>()
 defineEmits<{ click: []; edit: [trip: Trip]; delete: [id: number] }>()
 
 const tripStatus = computed(() => getTripStatus(props.trip.startDate, props.trip.endDate))
+const tripSoon   = computed(() => tripStatus.value === 'upcoming' && isSoon(props.trip.startDate))
+
+const cardStatusClass = computed(() => {
+  if (tripStatus.value === 'upcoming' && !tripSoon.value) return 'status-planning'
+  return `status-${tripStatus.value}`
+})
 
 const statusLabel = computed(() => {
-  if (tripStatus.value === 'active')    return '進行中'
-  if (tripStatus.value === 'upcoming')  return '即將到來'
+  if (tripStatus.value === 'active')   return '進行中'
+  if (tripStatus.value === 'upcoming') return tripSoon.value ? '即將到來' : '計畫中'
   return '已完成'
+})
+
+const badgeClass = computed(() => {
+  if (tripStatus.value === 'upcoming' && !tripSoon.value) return 'badge-planning'
+  return `badge-${tripStatus.value}`
 })
 
 const countdownText   = computed(() => getCountdownText(props.trip.startDate))
@@ -100,6 +112,7 @@ function formatDate(s: string) {
 /* 左側彩色邊線 */
 .trip-card.status-active    { border-left-color: var(--mint); }
 .trip-card.status-upcoming  { border-left-color: #6366F1; }
+.trip-card.status-planning  { border-left-color: #F59E0B; }
 .trip-card.status-completed { border-left-color: var(--border); opacity: 0.75; }
 
 .trip-card-header {
@@ -137,6 +150,10 @@ function formatDate(s: string) {
 .badge-completed {
   background: var(--border-light);
   color: var(--text-muted);
+}
+.badge-planning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #B45309;
 }
 
 /* Trip actions */

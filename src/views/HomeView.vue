@@ -114,15 +114,15 @@
       </div>
     </div>
 
-    <!-- Upcoming trips -->
-    <div v-if="upcomingTrips.length" class="section">
+    <!-- Upcoming trips (≤ 2 months) -->
+    <div v-if="soonTrips.length" class="section">
       <div class="section-header">
         <h3>🗓️ 即將到來</h3>
         <RouterLink to="/trips" class="btn btn-ghost btn-sm">查看全部 →</RouterLink>
       </div>
       <div class="trip-list-sm">
         <RouterLink
-          v-for="t in upcomingTrips"
+          v-for="t in soonTrips"
           :key="t.id"
           :to="`/trips/${t.id}`"
           class="trip-sm-card card trip-sm-upcoming"
@@ -142,6 +142,40 @@
           </div>
           <div class="trip-sm-right">
             <span class="countdown-chip">{{ getCountdownText(t.startDate) }}</span>
+            <span class="trip-sm-cur">{{ t.currency }}</span>
+          </div>
+        </RouterLink>
+      </div>
+    </div>
+
+    <!-- Planning trips (> 2 months) -->
+    <div v-if="laterTrips.length" class="section">
+      <div class="section-header">
+        <h3>📋 計畫中旅程</h3>
+        <RouterLink to="/trips" class="btn btn-ghost btn-sm">查看全部 →</RouterLink>
+      </div>
+      <div class="trip-list-sm">
+        <RouterLink
+          v-for="t in laterTrips"
+          :key="t.id"
+          :to="`/trips/${t.id}`"
+          class="trip-sm-card card trip-sm-planning"
+        >
+          <span class="trip-sm-icon">📋</span>
+          <div class="trip-sm-info">
+            <span class="trip-sm-name">{{ t.name }}</span>
+            <div class="trip-sm-timeline">
+              <span class="tl-now-label">{{ nowMonthLabel }}</span>
+              <div class="tl-mini-track">
+                <div class="tl-mini-dot start" />
+                <div class="tl-mini-line tl-line-amber" />
+                <div class="tl-mini-dot end tl-dot-amber" />
+              </div>
+              <span class="tl-start-label tl-amber">{{ monthLabel(t.startDate) }}</span>
+            </div>
+          </div>
+          <div class="trip-sm-right">
+            <span class="countdown-chip countdown-chip-amber">{{ getCountdownText(t.startDate) }}</span>
             <span class="trip-sm-cur">{{ t.currency }}</span>
           </div>
         </RouterLink>
@@ -199,7 +233,7 @@ import { useBudgetStore } from '@/stores/budget'
 import { CATEGORY_META } from '@/types'
 import type { Expense } from '@/types'
 import { useToast } from '@/composables/useToast'
-import { getTripStatus, getCountdownText, toMonthLabel, todayMonthLabel } from '@/utils/tripStatus'
+import { getTripStatus, getCountdownText, toMonthLabel, todayMonthLabel, isSoon } from '@/utils/tripStatus'
 
 const expenseStore = useExpenseStore()
 const tripStore = useTripStore()
@@ -235,9 +269,20 @@ const activeTrips = computed(() =>
   tripStore.trips.filter((t) => getTripStatus(t.startDate, t.endDate) === 'active')
 )
 const upcomingTrips = computed(() =>
-  tripStore.trips
-    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming')
-    .sort((a, b) => a.startDate.localeCompare(b.startDate))   // 最近出發的排前面
+  tripStore.trips.filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming')
+)
+// ≤ 2 個月：即將到來
+const soonTrips = computed(() =>
+  upcomingTrips.value
+    .filter((t) => isSoon(t.startDate))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .slice(0, 3)
+)
+// > 2 個月：計畫中旅程
+const laterTrips = computed(() =>
+  upcomingTrips.value
+    .filter((t) => !isSoon(t.startDate))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
     .slice(0, 3)
 )
 const completedTrips = computed(() =>
@@ -390,6 +435,7 @@ onMounted(async () => {
 .trip-sm-card:hover { transform: translateX(4px); }
 .trip-sm-active   { border-left-color: var(--mint); }
 .trip-sm-upcoming { border-left-color: #6366F1; }
+.trip-sm-planning { border-left-color: #F59E0B; }
 
 .trip-sm-icon { font-size: 1.5rem; flex-shrink: 0; }
 
@@ -454,6 +500,19 @@ onMounted(async () => {
   border-radius: var(--radius-full);
   white-space: nowrap;
 }
+.countdown-chip-amber {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #B45309;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+/* Planning timeline colors */
+.tl-line-amber { background: linear-gradient(to right, var(--border), #F59E0B) !important; }
+.tl-dot-amber  { background: #F59E0B !important; }
+.tl-amber      { color: #B45309 !important; }
 
 .trip-sm-completed { border-left-color: var(--border); opacity: 0.8; }
 

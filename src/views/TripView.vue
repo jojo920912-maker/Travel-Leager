@@ -7,6 +7,7 @@
           {{ store.trips.length }} 個旅程
           <template v-if="activeTrips.length">・{{ activeTrips.length }} 進行中</template>
           <template v-if="upcomingTrips.length">・{{ upcomingTrips.length }} 即將到來</template>
+          <template v-if="planningTrips.length">・{{ planningTrips.length }} 計畫中</template>
         </p>
       </div>
       <button class="btn btn-primary" @click="openAdd" title="新增旅程 (N)">
@@ -74,6 +75,25 @@
         <div class="trips-grid">
           <TripCard
             v-for="t in upcomingTrips"
+            :key="t.id"
+            :trip="t"
+            @click="router.push(`/trips/${t.id}`)"
+            @edit="openEdit(t)"
+            @delete="confirmDelete(t.id)"
+          />
+        </div>
+      </div>
+
+      <!-- 計畫中 (> 2 個月) -->
+      <div v-if="planningTrips.length" class="trip-section">
+        <div class="trip-section-header">
+          <span class="section-dot dot-planning" />
+          <h2 class="section-title">計畫中旅程</h2>
+          <span class="section-count">{{ planningTrips.length }}</span>
+        </div>
+        <div class="trips-grid">
+          <TripCard
+            v-for="t in planningTrips"
             :key="t.id"
             :trip="t"
             @click="router.push(`/trips/${t.id}`)"
@@ -152,7 +172,7 @@ import { useBudgetStore } from '@/stores/budget'
 import type { Trip } from '@/types'
 import { useToast } from '@/composables/useToast'
 import { useKeyboard } from '@/composables/useKeyboard'
-import { getTripStatus } from '@/utils/tripStatus'
+import { getTripStatus, isSoon } from '@/utils/tripStatus'
 
 const store = useTripStore()
 const budgetStore = useBudgetStore()
@@ -187,7 +207,12 @@ const activeTrips    = computed(() =>
 )
 const upcomingTrips  = computed(() =>
   store.trips
-    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming')
+    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming' && isSoon(t.startDate))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))   // 最近的排前面
+)
+const planningTrips  = computed(() =>
+  store.trips
+    .filter((t) => getTripStatus(t.startDate, t.endDate) === 'upcoming' && !isSoon(t.startDate))
     .sort((a, b) => a.startDate.localeCompare(b.startDate))   // 最近的排前面
 )
 const completedTrips = computed(() =>
@@ -313,6 +338,7 @@ onMounted(async () => {
 }
 .dot-active    { background: var(--mint); }
 .dot-upcoming  { background: #6366F1; }
+.dot-planning  { background: #F59E0B; }
 .dot-completed { background: var(--border); }
 
 .section-title {

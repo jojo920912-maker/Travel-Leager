@@ -50,6 +50,11 @@ export function getCountdownText(dateStr: string): string {
   return `還有 ${months} 個月`
 }
 
+/** 是否在 2 個月內即將出發（≤ 2 個月 = 「近期」） */
+export function isSoon(dateStr: string): boolean {
+  return monthsUntil(dateStr) <= 2
+}
+
 /** 月份標籤，e.g. "6月" */
 export function toMonthLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
