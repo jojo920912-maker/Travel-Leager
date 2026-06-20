@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Wallet, Map, PiggyBank } from 'lucide-vue-next'
+import { LayoutDashboard, Map, PiggyBank } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -31,10 +31,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const navItems = [
-  { to: '/',         label: '總覽', icon: LayoutDashboard },
-  { to: '/expenses', label: '記帳', icon: Wallet           },
-  { to: '/trips',    label: '旅行', icon: Map              },
-  { to: '/budget',   label: '預算', icon: PiggyBank        },
+  { to: '/',       label: '總覽', icon: LayoutDashboard },
+  { to: '/trips',  label: '旅行', icon: Map             },
+  { to: '/budget', label: '預算', icon: PiggyBank       },
 ]
 
 const avatarLetter = computed(() => {
