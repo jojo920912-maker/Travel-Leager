@@ -186,7 +186,7 @@ export const useTripStore = defineStore('trip', () => {
   async function addMember(data: Omit<TripMember, 'id'>) {
     try {
       const res = await memberApi.create(data)
-      members.value.push(res.data)
+      members.value = [...members.value, res.data]
       return res.data
     } catch (e) { throw toFriendlyError(e) }
   }
