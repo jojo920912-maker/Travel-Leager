@@ -259,4 +259,10 @@ function formatDate(s: string) {
 }
 
 .text-danger { color: var(--coral) !important; }
+
+@media (max-width: 380px) {
+  .trip-countdown { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .countdown-badge { align-self: flex-end; }
+  .trip-name { font-size: 0.95rem; }
+}
 </style>

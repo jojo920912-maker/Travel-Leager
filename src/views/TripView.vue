@@ -394,5 +394,8 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .trips-grid { grid-template-columns: 1fr; }
   .btn-label { display: none; }
+  .budget-mini { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .bm-right { width: 100%; justify-content: space-between; }
+  .bm-track { flex: 1; width: auto; }
 }
 </style>

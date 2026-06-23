@@ -496,6 +496,11 @@ async function handleForgotStep3() {
   z-index: 1;
 }
 
+@media (max-width: 400px) {
+  .auth-card { padding: 24px 18px; border-radius: var(--radius-lg); }
+  .auth-logo-icon { font-size: 2rem; }
+}
+
 /* Logo */
 .auth-logo {
   display: flex;

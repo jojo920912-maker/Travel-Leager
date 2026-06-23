@@ -99,6 +99,15 @@ h3 { font-size: 1.125rem; font-weight: 500; }
   .page-content {
     padding: 16px 16px 88px;
   }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.125rem; }
+  h3 { font-size: 1rem; }
+  .stat-value { font-size: 1.3rem; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.2rem; }
+  .section-header { flex-wrap: wrap; gap: 6px; }
 }
 
 /* ─── Cards ───────────────────────────────────────────────────── */

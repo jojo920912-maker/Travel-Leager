@@ -148,4 +148,8 @@ async function submit() {
 .form-stack { display: flex; flex-direction: column; gap: 16px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+
+@media (max-width: 480px) {
+  .form-row { grid-template-columns: 1fr; }
+}
 </style>

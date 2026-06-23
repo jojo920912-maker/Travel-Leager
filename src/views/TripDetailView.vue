@@ -344,5 +344,9 @@ onMounted(async () => {
   .trip-title-row { flex-direction: column; }
   .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
   .btn-label { display: none; }
+  /* Touch screens can't hover — always show edit/delete actions */
+  .te-actions { opacity: 1; }
+  .te-right { gap: 6px; }
+  .te-amount { font-size: 0.9rem; }
 }
 </style>
