@@ -20,7 +20,7 @@
             <span class="amount">{{ symbol }}{{ b.paid.toFixed(0) }}</span>
           </div>
           <div class="balance-row">
-            <span>應付</span>
+            <span>應分攤</span>
             <span class="amount">{{ symbol }}{{ b.shouldPay.toFixed(0) }}</span>
           </div>
           <div class="balance-divider" />
@@ -155,9 +155,9 @@ const symbol = computed(
 
 .settlement-arrow {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   color: var(--coral);
   flex-shrink: 0;
 }
