@@ -151,6 +151,7 @@ const symbol = computed(
 }
 
 .settlement-party { display: flex; align-items: center; gap: 8px; flex: 1; }
+.settlement-party:last-child { justify-content: flex-end; }
 .party-name { font-weight: 500; }
 
 .settlement-arrow {
